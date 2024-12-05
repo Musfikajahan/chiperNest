@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - CypherNest</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="notifications.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>CypherNest</h1>
+            </div>
+           
+            <button class="add-password-btn">
+                <i class="fas fa-plus"></i>
+                <span>Add Password</span>
+            </button>
+
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="vault.html" class="nav-item">
+                    <i class="fas fa-key"></i>
+                    <span>Password Vault</span>
+                </a>
+                <a href="generator.html" class="nav-item">
+                    <i class="fas fa-random"></i>
+                    <span>Generator</span>
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="notifications.html" class="nav-item active">
+                    <i class="fas fa-bell"></i>
+                    <span>Notifications</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <button class="logout-btn"><a href="logout.html">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+              </a>
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="notifications-header">
+                <div>
+                    <h1>Notifications</h1>
+                    <p>Stay informed about your password security</p>
+                </div>
+                <div class="header-actions">
+                    <button class="mark-all-btn">
+                        <i class="fas fa-check-double"></i>
+                        <span>Mark all as read</span>
+                    </button>
+                    <button class="filter-btn">
+                        <i class="fas fa-filter"></i>
+                        <span>Filter</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="notifications-container">
+                <div class="notification-filters">
+                    <button class="filter-tab active">All</button>
+                    <button class="filter-tab">Unread</button>
+                     <button class="filter-tab">Security Alerts</button>
+                    <button class="filter-tab">Updates</button>
+                </div>
+
+                <div class="notifications-list">
+                    <!-- Security Breach Alert -->
+                    <a href="vault.html" class="notification-item urgent unread">
+                        <div class="notification-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h3>Security Breach Detected</h3>
+                                <span class="notification-time">2 hours ago</span>
+                            </div>
+                            <p>Your Netflix account password may have been compromised in a recent data breach. Please update it immediately.</p>
+                            <div class="notification-actions">
+                                <button class="action-btn">Update Password</button>
+                                <button class="dismiss-btn">Dismiss</button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Password Update Reminder -->
+                    <a href="analytics.html" class="notification-item warning unread">
+                        <div class="notification-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h3>Password Update Reminder</h3>
+                                <span class="notification-time">1 day ago</span>
+                            </div>
+                            <p>3 of your passwords are over 90 days old. Consider updating them to maintain security.</p>
+                            <div class="notification-actions">
+                                <button class="action-btn">Review Passwords</button>
+                                <button class="dismiss-btn">Dismiss</button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Weak Password Alert -->
+                    <a href="vault.html" class="notification-item warning">
+                        <div class="notification-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h3>Weak Password Detected</h3>
+                                <span class="notification-time">2 days ago</span>
+                            </div>
+                            <p>Your GitHub password doesn't meet the recommended security standards. Generate a stronger password.</p>
+                            <div class="notification-actions">
+                                <button class="action-btn">Strengthen Password</button>
+                                <button class="dismiss-btn">Dismiss</button>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 2FA Recommendation -->
+                    <a href="2fa-setup.html" class="notification-item info">
+                        <div class="notification-icon">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-header">
+                                <h3>Enable Two-Factor Authentication</h3>
+                                <span class="notification-time">3 days ago</span>
+                            </div>
+                            <p>Enhance your account security by enabling two-factor authentication.</p>
+                            <div class="notification-actions">
+                                <button class="action-btn">Set up 2FA</button>
+                                <button class="dismiss-btn">Dismiss</button>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="notifications-settings">
+                    <h3>Notification Preferences</h3>
+                    <div class="settings-list">
+                        <label class="setting-item">
+                            <span class="setting-label">Security Alerts</span>
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="setting-item">
+                            <span class="setting-label">Password Updates</span>
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="setting-item">
+                            <span class="setting-label">Login Attempts</span>
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <label class="setting-item">
+                            <span class="setting-label">Email Notifications</span>
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

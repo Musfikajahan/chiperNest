@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password - CypherNest</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="forget.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="forgot-password-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>CypherNest</h1>
+                </div>
+                <h2>Reset Your Password</h2>
+                <p>Follow the steps below to securely reset your password</p>
+            </div>
+
+            <div class="recovery-steps">
+                <div class="step active" id="step1">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <h3>Verify Your Email</h3>
+                    </div>
+                    <div class="step-content">
+                        <form class="recovery-form">
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-envelope"></i>
+                                    <input type="email" id="email" placeholder="Enter your email address" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="primary-button">
+                                Send Recovery Code
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="step" id="step2">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <h3>2FA Verification</h3>
+                    </div>
+                    <div class="step-content">
+                        <p class="verification-message">Enter the 6-digit code from your authenticator app</p>
+                        <form class="recovery-form">
+                            <div class="form-group">
+                                <div class="code-input-group">
+                                    <input type="text" maxlength="1" class="code-input" required>
+                                    <input type="text" maxlength="1" class="code-input" required>
+                                    <input type="text" maxlength="1" class="code-input" required>
+                                    <input type="text" maxlength="1" class="code-input" required>
+                                    <input type="text" maxlength="1" class="code-input" required>
+                                    <input type="text" maxlength="1" class="code-input" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="primary-button">
+                                Verify Code
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </form>
+                        <div class="alternative-options">
+                            <button class="text-button">Use Recovery Code Instead</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step" id="step3">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <h3>Set New Password</h3>
+                    </div>
+                    <div class="step-content">
+                        <form class="recovery-form">
+                            <div class="form-group">
+                                <label for="new-password">New Password</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-lock"></i>
+                                    <input type="password" id="new-password" placeholder="Enter new password" required>
+                                </div>
+                                <div class="password-strength">
+                                    <div class="strength-bar">
+                                        <div class="strength-progress" style="width: 70%;"></div>
+                                    </div>
+                                    <span class="strength-text">Strong Password</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-password">Confirm Password</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-lock"></i>
+                                    <input type="password" id="confirm-password" placeholder="Confirm new password" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="primary-button">
+                                Reset Password
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auth-footer">
+                <a href="index.html" class="back-to-login">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Login
+                </a>
+                <a href="need.html" class="help-link">
+                    Need Help?
+                    <i class="fas fa-question-circle"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

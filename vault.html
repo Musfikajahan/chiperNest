@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Vault - CypherNest</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="vault.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>CypherNest</h1>
+            </div>
+            
+            <button class="add-password-btn" id="addPasswordBtn">
+                <i class="fas fa-plus"></i>
+                <span>Add Password</span>
+            </button>
+
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="vault.html" class="nav-item active">
+                    <i class="fas fa-key"></i>
+                    <span>Password Vault</span>
+                </a>
+                <a href="generator.html" class="nav-item">
+                    <i class="fas fa-random"></i>
+                    <span>Generator</span>
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="notifications.html" class="nav-item">
+                    <i class="fas fa-bell"></i>
+                    <span>Notifications</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <button class="logout-btn"><a href="logout.html">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+              </a>
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="vault-header">
+                <div>
+                    <h1>Password Vault</h1>
+                    <p>Manage your secure passwords</p>
+                </div>
+                <div class="vault-actions">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search passwords...">
+                    </div>
+                    <div class="filter-dropdown">
+                        <button>
+                            <i class="fas fa-filter"></i>
+                            <span>Filter</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="password-categories">
+                <button class="category-btn active">All Passwords</button>
+                <button class="category-btn">Recently Added</button>
+                <button class="category-btn">Favorites</button>
+                <button class="category-btn warning">Weak Passwords</button>
+            </div>
+
+            <div class="password-grid">
+                <!-- Password Cards -->
+                <div class="password-card">
+                    <div class="card-header">
+                        <img src="https://www.google.com/favicon.ico" alt="Google">
+                        <div class="card-title">
+                            <h3>Google</h3>
+                            <p>user@example.com</p>
+                        </div>
+                        <button class="more-btn">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                    <div class="card-actions">
+                        <span class="last-updated">Updated 2 days ago</span>
+                        <div class="action-buttons">
+                            <button title="Copy password">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button title="Visit website">
+                                <i class="fas fa-external-link-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- More password cards... -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Password Modal -->
+    <div class="modal" id="addPasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Password</h2>
+                <button class="close-modal">×</button>
+            </div>
+            <form class="password-form">
+                <div class="form-group">
+                    <label for="website">Website</label>
+                    <input type="text" id="website" placeholder="Enter website name">
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Enter username or email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-input">
+                        <input type="password" id="password" placeholder="Enter password">
+                        <button type="button" class="toggle-password">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="cancel-btn">Cancel</button>
+                    <button type="submit" class="save-btn">Save Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

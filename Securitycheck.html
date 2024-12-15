@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Check - CypherNest</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="security-check.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>CypherNest</h1>
+            </div>
+            
+            <button class="add-password-btn">
+                <i class="fas fa-plus"></i>
+                <span>Add Password</span>
+            </button>
+
+            <nav class="nav-menu">
+                <a href="index.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="vault.html" class="nav-item">
+                    <i class="fas fa-key"></i>
+                    <span>Password Vault</span>
+                </a>
+                <a href="generator.html" class="nav-item">
+                    <i class="fas fa-random"></i>
+                    <span>Generator</span>
+                </a>
+                <a href="security-check.html" class="nav-item active">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security Check</span>
+                </a>
+                <a href="analytics.html" class="nav-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="notifications.html" class="nav-item">
+                    <i class="fas fa-bell"></i>
+                    <span>Notifications</span>
+                </a>
+                <a href="settings.html" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+
+            <button class="logout-btn">
+                <a href="logout.html">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="security-header">
+                <div>
+                    <h1>Security Check</h1>
+                    <p>Verify and enhance your password security</p>
+                </div>
+            </div>
+
+            <!-- Password Security Check Section -->
+            <div class="security-grid">
+                <!-- Password Strength Checker -->
+                <div class="security-card">
+                    <div class="card-header">
+                        <i class="fas fa-lock"></i>
+                        <h2>Password Strength Check</h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="password-input-group">
+                            <input type="password" id="passwordCheck" placeholder="Enter password to check">
+                            <button class="toggle-visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="strength-meter">
+                            <div class="strength-bar"></div>
+                        </div>
+                        <div class="strength-label">Password Strength: <span>Not Checked</span></div>
+                        <ul class="password-requirements">
+                            <li class="requirement"><i class="fas fa-check"></i> Minimum 8 characters</li>
+                            <li class="requirement"><i class="fas fa-check"></i> Contains uppercase letters</li>
+                            <li class="requirement"><i class="fas fa-check"></i> Contains numbers</li>
+                            <li class="requirement"><i class="fas fa-check"></i> Contains special characters</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Breach Check -->
+                <div class="security-card">
+                    <div class="card-header">
+                        <i class="fas fa-search"></i>
+                        <h2>Password Breach Check</h2>
+                    </div>
+                    <div class="card-content">
+                        <p class="description">Check if your password has been exposed in known data breaches</p>
+                        <div class="password-input-group">
+                            <input type="password" id="breachCheck" placeholder="Enter password to check">
+                            <button class="check-breach-btn">Check</button>
+                        </div>
+                        <div class="breach-result">
+                            <div class="result-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <p>Enter a password to check for breaches</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Alerts -->
+                <div class="security-card full-width">
+                    <div class="card-header">
+                        <i class="fas fa-bell"></i>
+                        <h2>Security Alerts</h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="alerts-list">
+                            <div class="alert-item warning">
+                                <div class="alert-icon">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                                <div class="alert-content">
+                                    <h3>Weak Password Detected</h3>
+                                    <p>Your Facebook account password is potentially weak</p>
+                                    <span class="alert-time">2 hours ago</span>
+                                </div>
+                                <button class="alert-action">Fix Now</button>
+                            </div>
+                            <div class="alert-item danger">
+                                <div class="alert-icon">
+                                    <i class="fas fa-skull"></i>
+                                </div>
+                                <div class="alert-content">
+                                    <h3>Password Breach Detected</h3>
+                                    <p>Your email password was found in a recent data breach</p>
+                                    <span class="alert-time">1 day ago</span>
+                                </div>
+                                <button class="alert-action">Change Password</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

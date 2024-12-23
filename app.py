@@ -10,108 +10,113 @@ import os
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
+import mysql.connector
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://username:your_password@localhost/database_name'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+CORS(app)
+class Password(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    website = db.Column(db.String(255), nullable=False)
+    username = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+    logo_url = db.Column(db.String(255), nullable=True)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "website": self.website,
+            "username": self.username,
+            "password": self.password,
+            "logo_url": self.logo_url,
+            "last_updated": self.last_updated
+        }
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    two_fa_secret = db.Column(db.String(32), nullable=True)
+    backup_codes = db.Column(db.JSON, nullable=True)
+    last_2fa_attempt = db.Column(db.DateTime, nullable=True)
+    failed_attempts = db.Column(db.Integer, default=0)
+
+    def increment_failed_attempts(self):
+        self.failed_attempts += 1
+        self.last_2fa_attempt = datetime.utcnow()
+
+    def locked(self):
+        if self.failed_attempts >= 3:
+            cooldown = timedelta(minutes=15)
+            if datetime.utcnow() - self.last_2fa_attempt < cooldown:
+                return True
+        return False
+
+    def reset_failed_attempts(self):
+        self.failed_attempts = 0
+        self.last_2fa_attempt = None
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="username",
+        password="password",
+        database="database_name"
+    )
 #====================================Password Vault Page=============================================
-# Dummy Passwords Database (Will Replace with MySQL later)
-# PASSWORDS_DB = [
-#     {
-#         "id": 1,
-#         "website": "Google",
-#         "username": "user@example.com",
-#         "password": "P@ssw0rd123!",
-#         "logo_url": "https://www.google.com/favicon.ico",
-#         "last_updated": "2 days ago",
-#     }
-# ]
 
-# # Function to Connect to MySQL Database
-# def get_db_connection():
-#     return mysql.connector.connect(
-#         host="localhost",
-#         user="your_username",
-#         password="your_password",
-#         database="your_database_name"
-#     )
+# Route to Serve Vault Page
+@app.route('/vault')
+def vault():
+    return render_template('vault.html')
 
-# # Route to Serve Vault Page
-# @app.route('/vault')
-# def vault():
-#     return render_template('vault.html')
+# API Route to Fetch All Passwords
+@app.route('/api/passwords', methods=['GET'])
+def get_passwords():
+    try:
+        passwords = Password.query.all()
+        return jsonify([password.to_dict() for password in passwords]), 200
+    except Exception as e:
+        return jsonify({"error": "Failed to fetch passwords.", "details": str(e)}), 500
 
-# # API Route to Fetch All Passwords
-# @app.route('/api/passwords', methods=['GET'])
-# def get_passwords():
-#     try:
-#         # Uncomment below when MySQL is ready
-#         # db = get_db_connection()
-#         # cursor = db.cursor(dictionary=True)
-#         # cursor.execute("SELECT * FROM passwords")
-#         # passwords = cursor.fetchall()
-#         # db.close()
+# API Route to Add a New Password
+@app.route('/api/passwords', methods=['POST'])
+def add_password():
+    try:
+        data = request.get_json()
+        website = data.get("website")
+        username = data.get("username")
+        password = data.get("password")
+        logo_url = f"https://www.google.com/favicon.ico"  # Placeholder for website logo
 
-#         # Return dummy database for now
-#         return jsonify(PASSWORDS_DB), 200
-#     except Exception as e:
-#         return jsonify({"error": "Failed to fetch passwords.", "details": str(e)}), 500
+        new_password = Password(
+            website=website,
+            username=username,
+            password=password,
+            logo_url=logo_url
+        )
+        db.session.add(new_password)
+        db.session.commit()
 
-# # API Route to Add a New Password
-# @app.route('/api/passwords', methods=['POST'])
-# def add_password():
-#     try:
-#         data = request.get_json()
-#         website = data.get("website")
-#         username = data.get("username")
-#         password = data.get("password")
-#         logo_url = f"https://www.google.com/favicon.ico"  # Placeholder for website logo
+        return jsonify({"message": "Password added successfully!"}), 201
+    except Exception as e:
+        return jsonify({"error": "Failed to add password.", "details": str(e)}), 500
 
-#         # Insert into MySQL (Uncomment when ready)
-#         # db = get_db_connection()
-#         # cursor = db.cursor()
-#         # cursor.execute(
-#         #     "INSERT INTO passwords (website, username, password, logo_url) VALUES (%s, %s, %s, %s)",
-#         #     (website, username, password, logo_url)
-#         # )
-#         # db.commit()
-#         # db.close()
-
-#         # Add to dummy database
-#         new_password = {
-#             "id": len(PASSWORDS_DB) + 1,
-#             "website": website,
-#             "username": username,
-#             "password": password,
-#             "logo_url": logo_url,
-#             "last_updated": "just now",
-#         }
-#         PASSWORDS_DB.append(new_password)
-#         return jsonify({"message": "Password added successfully!", "password": new_password}), 201
-#     except Exception as e:
-#         return jsonify({"error": "Failed to add password.", "details": str(e)}), 500
-
-# # API Route to Delete a Password
-# @app.route('/api/passwords/<int:password_id>', methods=['DELETE'])
-# def delete_password(password_id):
-#     try:
-#         # Delete from MySQL (Uncomment when ready)
-#         # db = get_db_connection()
-#         # cursor = db.cursor()
-#         # cursor.execute("DELETE FROM passwords WHERE id = %s", (password_id,))
-#         # db.commit()
-#         # db.close()
-
-#         # Remove from dummy database
-#         global PASSWORDS_DB
-#         PASSWORDS_DB = [p for p in PASSWORDS_DB if p["id"] != password_id]
-#         return jsonify({"message": "Password deleted successfully!"}), 200
-#     except Exception as e:
-#         return jsonify({"error": "Failed to delete password.", "details": str(e)}), 500
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
+# API Route to Delete a Password
+@app.route('/api/passwords/<int:password_id>', methods=['DELETE'])
+def delete_password(password_id):
+    try:
+        password = Password.query.get(password_id)
+        if password:
+            db.session.delete(password)
+            db.session.commit()
+            return jsonify({"message": "Password deleted successfully!"}), 200
+        else:
+            return jsonify({"error": "Password not found."}), 404
+    except Exception as e:
+        return jsonify({"error": "Failed to delete password.", "details": str(e)}), 500
 #====================================Generate Random Password========================================
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -190,13 +195,11 @@ def save_password():
 #==============================================2FA==================================================
 
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///two_factor_auth.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://your_username:your_password@localhost/your_database_name'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 CORS(app)
-
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -353,5 +356,3 @@ if __name__ == '__main__':
         db.create_all()
     app.run(debug=True)
 
-# if __name__ == '__main__':
-#     app.run(debug=True)

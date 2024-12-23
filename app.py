@@ -58,21 +58,14 @@ class User(db.Model):
     def reset_failed_attempts(self):
         self.failed_attempts = 0
         self.last_2fa_attempt = None
-def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="username",
-        password="password",
-        database="database_name"
-    )
+
+
 #====================================Password Vault Page=============================================
 
-# Route to Serve Vault Page
 @app.route('/vault')
 def vault():
     return render_template('vault.html')
 
-# API Route to Fetch All Passwords
 @app.route('/api/passwords', methods=['GET'])
 def get_passwords():
     try:
@@ -81,7 +74,6 @@ def get_passwords():
     except Exception as e:
         return jsonify({"error": "Failed to fetch passwords.", "details": str(e)}), 500
 
-# API Route to Add a New Password
 @app.route('/api/passwords', methods=['POST'])
 def add_password():
     try:
@@ -89,13 +81,12 @@ def add_password():
         website = data.get("website")
         username = data.get("username")
         password = data.get("password")
-        logo_url = f"https://www.google.com/favicon.ico"  # Placeholder for website logo
-
+       # logo_url = f"https://www.google.com"  
         new_password = Password(
             website=website,
             username=username,
             password=password,
-            logo_url=logo_url
+            #logo_url=logo_url
         )
         db.session.add(new_password)
         db.session.commit()
@@ -104,7 +95,6 @@ def add_password():
     except Exception as e:
         return jsonify({"error": "Failed to add password.", "details": str(e)}), 500
 
-# API Route to Delete a Password
 @app.route('/api/passwords/<int:password_id>', methods=['DELETE'])
 def delete_password(password_id):
     try:
@@ -117,11 +107,10 @@ def delete_password(password_id):
             return jsonify({"error": "Password not found."}), 404
     except Exception as e:
         return jsonify({"error": "Failed to delete password.", "details": str(e)}), 500
+
 #====================================Generate Random Password========================================
-# Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Password generation logic
 def generate_password(length=8, use_uppercase=True, use_lowercase=True, use_numbers=True, use_symbols=True):
     char_set = ""
     if use_uppercase:
@@ -182,11 +171,34 @@ def save_password():
         if not data:
             return jsonify({"error": "Invalid JSON request."}), 400
 
+        website = data.get('website')
+        username = data.get('username')
         password = data.get('password')
         if not password or len(password) < 8:
             return jsonify({"error": "Invalid password. Password must be at least 8 characters long."}), 400
 
-        logging.info(f"Password saved: {password}")  # Replace with secure save logic
+        #logo_url = f"https://www.google.com"  
+
+        new_password = Password(
+            website=website,
+            username=username,
+            password=password,
+            #logo_url=logo_url
+        )
+        db.session.add(new_password)
+        db.session.commit()
+
+        logging.info(f"Password saved: {password}")
+        return jsonify({"message": "Password saved successfully!"}), 200
+
+    except Exception as e:
+        logging.error(f"Error saving password: {e}")
+        return jsonify({"error": "Failed to save password."}), 500
+
+        if not password or len(password) < 8:
+            return jsonify({"error": "Invalid password. Password must be at least 8 characters long."}), 400
+
+        logging.info(f"Password saved: {password}")  
         return jsonify({"message": "Password saved successfully!"}), 200
 
     except Exception as e:
@@ -265,23 +277,16 @@ def generate_2fa_secret():
         if not user:
             user = User(email=email)
             db.session.add(user)
-
-        # Generate and store 2FA secret
         secret = TwoFactorAuth.generate_secret()
         user.two_fa_secret = secret
-
-        # Generate backup codes
         backup_codes = TwoFactorAuth.generate_backup_codes()
         user.backup_codes = backup_codes
-
-        # Create QR code
         qr_code = TwoFactorAuth.create_qr_code(secret, email)
         if not qr_code:
             logging.error(f"generation failed for email: {email}")
             return jsonify({"error": "Failed to generate QR code."}), 500
 
         db.session.commit()
-
         return jsonify({
             "secret": secret, 
             "qr_code": qr_code, 
@@ -306,14 +311,11 @@ def verify_otp():
             return jsonify({"error": "2FA not set up for this user."}), 400
         if user.locked():
             return jsonify({"error": "Too many failed attempts. Please try again later."}), 429
-
-        # Check for brute force protection
         if user.failed_attempts >= 3 and user.last_2fa_attempt:
             cooldown = timedelta(minutes=15)
             if datetime.utcnow() - user.last_2fa_attempt < cooldown:
                 return jsonify({"error": "Too many failed attempts. Please try again later."}), 429
 
-        # Verify OTP
         if TwoFactorAuth.verify_otp(user.two_fa_secret, otp):
             user.reset_failed_attempts()
             db.session.commit()
@@ -340,9 +342,7 @@ def validate_backup_code():
         if not isinstance(user.backup_codes, list):
             return jsonify({"error": "Invalid backup codes format."}), 500
 
-        # Check if backup code exists
         if code in user.backup_codes:
-            # Remove the used backup code
             user.backup_codes.remove(code)
             db.session.commit()
             return jsonify({"message": "Backup code accepted!"}), 200

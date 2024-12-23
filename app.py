@@ -6,19 +6,16 @@ import logging
 import pyotp
 import qrcode
 from io import BytesIO
-import base64
-import pyotp
-import qrcode
-from io import BytesIO
 import os
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
-#import mysql.connector  # Import MySQL library for future use
 app = Flask(__name__, static_folder='static', template_folder='templates')
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
+
+
 #====================================Password Vault Page=============================================
-# Dummy Passwords Database (Replace with MySQL later)
+# Dummy Passwords Database (Will Replace with MySQL later)
 # PASSWORDS_DB = [
 #     {
 #         "id": 1,
@@ -120,7 +117,7 @@ CORS(app)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Password generation logic
-def generate_password(length=16, use_uppercase=True, use_lowercase=True, use_numbers=True, use_symbols=True):
+def generate_password(length=8, use_uppercase=True, use_lowercase=True, use_numbers=True, use_symbols=True):
     char_set = ""
     if use_uppercase:
         char_set += string.ascii_uppercase
@@ -233,7 +230,7 @@ class TwoFactorAuth:
     @staticmethod
     def create_qr_code(secret, email):
         try:
-            if not email or not not email.endswith('@gmail.com'):
+            if not email or not email.endswith('@gmail.com'):
                 raise ValueError("Invalid email address")
             totp = pyotp.TOTP(secret)
             qr_data = totp.provisioning_uri(name=email, issuer_name="CypherNest")
@@ -275,16 +272,20 @@ def generate_2fa_secret():
         user.backup_codes = backup_codes
 
         # Create QR code
-        qr_base64 = TwoFactorAuth.create_qr_code(secret, email)
+        qr_code = TwoFactorAuth.create_qr_code(secret, email)
+        if not qr_code:
+            logging.error(f"generation failed for email: {email}")
+            return jsonify({"error": "Failed to generate QR code."}), 500
 
-        #db.session.commit()
+        db.session.commit()
 
         return jsonify({
             "secret": secret, 
-            "qr_code": qr_base64, 
+            "qr_code": qr_code, 
             "backup_codes": backup_codes
         }), 200
     except Exception as e:
+        logging.error(f"Error in generate_2fa_secret: {e}")
         db.session.rollback()
         return jsonify({"error": "Failed to generate 2FA secret.", "details": str(e)}), 500
 
@@ -333,6 +334,8 @@ def validate_backup_code():
         user = User.query.filter_by(email=email).first()
         if not user or not user.backup_codes:
             return jsonify({"error": "No backup codes available."}), 400
+        if not isinstance(user.backup_codes, list):
+            return jsonify({"error": "Invalid backup codes format."}), 500
 
         # Check if backup code exists
         if code in user.backup_codes:
@@ -345,19 +348,10 @@ def validate_backup_code():
     except Exception as e:
         return jsonify({"error": "Failed to validate backup code.", "details": str(e)}), 500
 
-@app.route('/api/2fa/generate', methods=['POST'])
-def generate_qr_code():
-    email = request.json['email']
-    secret = app.config['SECRET_KEY']
-    qr_code = TwoFactorAuth.create_qr_code(secret, email)
-    if qr_code:
-        return {'qr_code': qr_code}
-    else:
-        return {'error': 'Failed to generate QR code'}, 500
-# if __name__ == '__main__':
-#     with app.app_context():
-#         db.create_all()
-#     app.run(debug=True)
-
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
+
+# if __name__ == '__main__':
+#     app.run(debug=True)

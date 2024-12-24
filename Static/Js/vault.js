@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeModalBtn = document.querySelector(".close-modal");
     const saveBtn = document.querySelector(".save-btn");
 
-    // Fetch and display passwords from the backend
+    //  display passwords from the backend
     async function fetchPasswords() {
         try {
             const response = await fetch("/api/passwords");
@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function displayPasswords(passwords) {
-        passwordGrid.innerHTML = ""; // Clear existing passwords
+        passwordGrid.innerHTML = ""; 
         passwords.forEach((password) => {
             const card = document.createElement("div");
             card.className = "password-card";
@@ -49,11 +49,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Show/Hide modal
     addPasswordBtn.addEventListener("click", () => addPasswordModal.classList.add("active"));
     closeModalBtn.addEventListener("click", () => addPasswordModal.classList.remove("active"));
-
-    // Save a new password
+    //  new password save
     saveBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         const website = document.getElementById("website").value;
@@ -83,6 +81,5 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // Fetch passwords on page load
     fetchPasswords();
 });

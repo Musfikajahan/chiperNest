@@ -2,6 +2,7 @@ class TwoFactorAuth {
     constructor() {
         this.initializeElements();
         this.attachEventListeners();
+        this.generateQRCode(); 
     }
 
     initializeElements() {
@@ -14,6 +15,11 @@ class TwoFactorAuth {
         this.generateButton = document.querySelector("#generate-2fa-btn");
         this.downloadCodesButton = document.querySelector(".download-btn");
         this.printCodesButton = document.querySelector(".print-btn");
+        this.loadingSpinner = document.querySelector(".loading-spinner");
+        this.manualKeyBtn = document.querySelector(".manual-key-btn");
+        this.manualKeyContainer = document.querySelector(".manual-key-container");
+        this.manualKeyInput = document.querySelector(".manual-key");
+        this.copyKeyBtn = document.querySelector(".copy-key-btn");
 
         if (!this.emailInput) {
             console.error("Email input field is missing in the DOM.");
@@ -25,6 +31,8 @@ class TwoFactorAuth {
         this.generateButton?.addEventListener("click", () => this.generate2FA());
         this.downloadCodesButton?.addEventListener("click", () => this.downloadBackupCodes());
         this.printCodesButton?.addEventListener("click", () => this.printBackupCodes());
+        this.manualKeyBtn?.addEventListener("click", () => this.toggleManualKey());
+        this.copyKeyBtn?.addEventListener("click", () => this.copyManualKey());
     }
 
     displayMessage(message, isError = false) {
@@ -46,7 +54,8 @@ class TwoFactorAuth {
     }
 
     async generate2FA() {
-        const BASE_URL = "http://127.0.0.1:5000"; // Backend URL
+        const BASE_URL = "http://127.0.0.1:5000"; 
+        const loadingSpinner = document.querySelector('.loading-spinner');
 
         try {
             const email = this.emailInput?.value.trim();
@@ -76,8 +85,16 @@ class TwoFactorAuth {
                 throw new Error("QR Code missing from response.");
             }
 
-            this.updateQRCode(data.qr_code);
+            loadingSpinner.style.display = 'block';
+            await this.updateQRCode(data.qr_code);
             this.updateBackupCodes(data.backup_codes);
+
+            const currentStep = document.querySelector('.step.active');
+            const nextStep = currentStep.nextElementSibling;
+            if (nextStep) {
+                currentStep.classList.remove('active');
+                nextStep.classList.add('active');
+            }
             this.displayMessage("2FA setup successful! Scan QR code and save backup codes.");
         } catch (error) {
             console.error("Error generating 2FA:", error);
@@ -85,11 +102,12 @@ class TwoFactorAuth {
         } finally {
             this.generateButton.disabled = false;
             this.generateButton.textContent = "Generate 2FA";
+            loadingSpinner.style.display = 'none';
         }
     }
 
     async verifyOTP() {
-        const BASE_URL = "http://127.0.0.1:5000"; // Backend URL
+        const BASE_URL = "http://127.0.0.1:5000"; 
 
         try {
             const otp = this.otpInput?.value.trim();
@@ -129,10 +147,73 @@ class TwoFactorAuth {
         }
     }
 
-    updateQRCode(qrCodeBase64) {
-        if (this.qrImage && qrCodeBase64) {
-            this.qrImage.src = `data:image/png;base64,${qrCodeBase64}`;
+    async generateQRCode() {
+        try {
+            this.loadingSpinner.style.display = 'block';
+            const response = await fetch('http://127.0.0.1:5000/api/2fa/setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to generate 2FA setup');
+            }
+
+            const data = await response.json();
+            await this.updateQRCode(data.qr_code);
+            this.updateBackupCodes(data.backup_codes);
+            this.manualKeyInput.value = data.secret;
+            this.secret = data.secret;
+
+        } catch (error) {
+            this.displayMessage('Failed to generate 2FA setup', true);
+            console.error(error);
+        } finally {
+            this.loadingSpinner.style.display = 'none';
         }
+    }
+
+    toggleManualKey() {
+        const isHidden = this.manualKeyContainer.style.display === 'none';
+        this.manualKeyContainer.style.display = isHidden ? 'flex' : 'none';
+        this.manualKeyBtn.querySelector('span').textContent = 
+            isHidden ? 'Hide Manual Key' : 'Show Manual Key';
+    }
+
+    async copyManualKey() {
+        try {
+            await navigator.clipboard.writeText(this.manualKeyInput.value);
+            this.displayMessage('Manual key copied to clipboard');
+        } catch (error) {
+            this.displayMessage('Failed to copy manual key', true);
+        }
+    }
+
+    updateQRCode(qrCodeBase64) {
+        const loadingSpinner = document.querySelector('.loading-spinner');
+        
+        if (!this.qrImage) {
+            console.error('QR image element not found');
+            return;
+        }
+
+        loadingSpinner.style.display = 'block';
+        
+        return new Promise((resolve, reject) => {
+            this.qrImage.onload = () => {
+                loadingSpinner.style.display = 'none';
+                resolve();
+            };
+            
+            this.qrImage.onerror = (error) => {
+                loadingSpinner.style.display = 'none';
+                this.displayMessage('Failed to load QR code', true);
+                reject(error);
+            };
+            
+            this.qrImage.src = `data:image/png;base64,${qrCodeBase64}`;
+        });
     }
 
     updateBackupCodes(codes) {

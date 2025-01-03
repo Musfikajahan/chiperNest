@@ -19,8 +19,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
-CORS(app)
-
+#CORS(app)
+CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5000", "http://127.0.0.1:5000"]}})
 class User(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=str(uuid.uuid4()))
     email = db.Column(db.String(120), unique=True, nullable=False)

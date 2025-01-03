@@ -10,20 +10,17 @@
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
                 <i class="fas fa-shield-alt"></i>
-                <h1>ChiperNest</h1>
+                <h1>CypherNest</h1>
             </div>
-           
             <a href="password_form.php">
                 <button class="add-password-btn">
                     <i class="fas fa-plus"></i>
                     <span>Add Password</span>
                 </button>
             </a>
-
             <nav class="nav-menu">
                 <a href="index.php" class="nav-item">
                     <i class="fas fa-home"></i>
@@ -56,8 +53,6 @@
                 <span>Logout</span>
             </button>
         </aside>
-
-        <!-- Main Content -->
         <main class="main-content">
             <div class="setup-header">
                 <a href="#" class="back-link">
@@ -69,8 +64,8 @@
                     <p>Enhance your account security</p>
                 </div>
             </div>
-
             <div class="setup-container">
+                <div class="message-container"></div>
                 <div class="setup-steps">
                     <div class="step active">
                         <div class="step-number">1</div>
@@ -89,14 +84,21 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="step">
                         <div class="step-number">2</div>
                         <div class="step-content">
                             <h3>Scan QR Code</h3>
                             <p>Open your authenticator app and scan this QR code</p>
                             <div class="qr-container">
+                                <div class="loading-spinner" style="display: none;"></div>
                                 <img src="" alt="2FA QR Code" class="qr-code">
+                                <div class="manual-key-container" style="display: none;">
+                                    <input type="text" class="manual-key" readonly>
+                                    <button class="copy-key-btn">
+                                        <i class="fas fa-copy"></i>
+                                        Copy
+                                    </button>
+                                </div>
                                 <button class="manual-key-btn">
                                     <i class="fas fa-key"></i>
                                     <span>Show Manual Key</span>
@@ -140,7 +142,6 @@
             </div>
         </main>
     </div>
-
-    <script src="2fa.js"></script>
+    <script src="/static/js/2fa.js"></script>
 </body>
 </html>

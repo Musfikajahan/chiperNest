@@ -11,11 +11,10 @@ from flask import Flask, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:your_password@localhost/ciphernest'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root@localhost/ciphernest'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -36,7 +35,7 @@ class User(db.Model):
     # Security Tracking
     last_2fa_attempt = db.Column(db.DateTime, nullable=True)
     failed_attempts = db.Column(db.Integer, default=0)
-    
+
     def increment_failed_attempts(self):
         self.failed_attempts += 1
         self.last_2fa_attempt = datetime.utcnow()

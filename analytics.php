@@ -130,9 +130,9 @@ $recent_count = $row['count'];
                     <i class="fas fa-bell"></i>
                     <span>Notifications</span>
                 </a>
-                <a href="Securitycheck.html" class="nav-item active">
+                <a href="settings.php" class="nav-item ">
                     <i class="fas fa-shield-alt"></i>
-                    <span>Security Check</span>
+                    <span>Settings</span>
                 </a>
             </nav>
             <button class="logout-btn">
@@ -203,7 +203,7 @@ $recent_count = $row['count'];
                     </div>
                 </div>
                 <!-- Action Items -->
-                <div class="analytics-card action-items">
+                <!-- <div class="analytics-card action-items">
                     <h3>Recommended Actions</h3>
                     <div class="action-list">
                         <a href="vault.html" class="action-item warning">
@@ -237,10 +237,10 @@ $recent_count = $row['count'];
                             <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Password Age Chart -->
-                <div class="analytics-card password-age">
+                <!-- <div class="analytics-card password-age">
                     <h3>Password Age Distribution</h3>
                     <div class="age-chart">
                         <div class="chart-bar">
@@ -260,7 +260,7 @@ $recent_count = $row['count'];
                             <span class="bar-label">90+ days</span>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
         </main>
     </div>

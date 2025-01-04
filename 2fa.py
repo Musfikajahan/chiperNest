@@ -14,7 +14,7 @@ from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root@localhost/ciphernest'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/chipernest'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -23,15 +23,18 @@ bcrypt = Bcrypt(app)
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5000", "http://127.0.0.1:5000"]}})
 
 class User(db.Model):
-    id = db.Column(db.String(36), primary_key=True, default=str(uuid.uuid4()))
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    username = db.Column(db.String(50), unique=True)
-    password_hash = db.Column(db.String(255))
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.Text, nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reset_token_hash = db.Column(db.String(64), nullable=True)
+    reset_token_expires_at = db.Column(db.DateTime, nullable=True)
     
+    # 2FA Fields
     two_fa_secret = db.Column(db.String(32), nullable=True)
-    two_fa_enabled = db.Column(db.Boolean, default=False)
-    backup_codes = db.Column(db.JSON, nullable=True)
-    
+    backup_codes = db.Column(db.Text, nullable=True)
     last_2fa_attempt = db.Column(db.DateTime, nullable=True)
     failed_attempts = db.Column(db.Integer, default=0)
 
@@ -70,6 +73,7 @@ class TwoFactorAuth:
             totp = pyotp.TOTP(secret)
             qr_data = totp.provisioning_uri(name=email, issuer_name="CypherNest")
             
+            # Add error handling for QR code generation
             try:
                 qr = qrcode.make(qr_data)
             except Exception as e:
@@ -94,6 +98,7 @@ class TwoFactorAuth:
 @app.route('/api/2fa/generate', methods=['POST'])
 def generate_2fa_secret():
     try:
+        # Add request validation
         if not request.is_json:
             return jsonify({"error": "Missing JSON in request"}), 400
             
@@ -177,6 +182,7 @@ def validate_backup_code():
 @app.route('/api/2fa/setup', methods=['POST'])
 def setup_2fa():
     try:
+        # Get user from session instead of email
         user_id = session.get('user_id')
         if not user_id:
             return jsonify({"error": "Not authenticated"}), 401
@@ -184,13 +190,17 @@ def setup_2fa():
         user = User.query.get(user_id)
         if not user:
             return jsonify({"error": "User not found"}), 404
+
+        # Generate new 2FA secret
         secret = TwoFactorAuth.generate_secret()
         backup_codes = TwoFactorAuth.generate_backup_codes()
         
+        # Save to database
         user.two_fa_secret = secret
         user.backup_codes = backup_codes
         user.two_fa_enabled = False  
         
+        # Generate QR code
         qr_code = TwoFactorAuth.create_qr_code(secret, user.email)
         if not qr_code:
             return jsonify({"error": "Failed to generate QR code"}), 500
@@ -208,6 +218,7 @@ def setup_2fa():
         logging.error(f"2FA setup error: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
+# Run the application
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

@@ -76,7 +76,11 @@ $conn->close();
                     <i class="fas fa-random"></i>
                     <span>Generator</span>
                 </a>
-                <a href="analytics.html" class="nav-item">
+                <a href="Securitycheck.html" class="nav-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security Check</span>
+                </a>
+                <a href="analytics.php" class="nav-item">
                     <i class="fas fa-chart-line"></i>
                     <span>Analytics</span>
                 </a>
@@ -84,7 +88,7 @@ $conn->close();
                     <i class="fas fa-bell"></i>
                     <span>Notifications</span>
                 </a>
-                <a href="settings.html" class="nav-item">
+                <a href="settings.php" class="nav-item">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
                 </a>
@@ -102,15 +106,15 @@ $conn->close();
         <main class="main-content">
             <header class="dashboard-header">
                 <div class="welcome-section">
-                    <h1>Welcome back,</h1>
+                    <h2>Welcome back ,<?php echo htmlspecialchars($user['name']); ?></h2>
                     <p>Here's what's happening with your passwords</p>
                 </div>
-                 <div class="profile-dropdown">
+                 <!-- <div class="profile-dropdown">
                     <div class="profile-menu">
                         <div class="profile-header">
                             <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($user['name']); ?>&background=3b82f6&color=fff" alt="Profile" class="profile-image-large">
                             <div class="profile-info">
-                                <h3><?php echo htmlspecialchars($user['name']); ?></h3>
+                                <h3></h3>
                                 <p><?php echo htmlspecialchars($user['email']); ?></p>
                             </div>
                         </div>
@@ -136,7 +140,7 @@ $conn->close();
                                 <span>Sign Out</span>
                             </a>
                         </div>
-                    </div>
+                    </div> -->
             </header>
 
             <section class="quick-actions">
@@ -150,10 +154,10 @@ $conn->close();
                     </a>
                 </div>
                 <div class="action-card green">
-                 <div class="action-icon">
+                  <div class="action-icon">
                     <a href="generator.html" class="nav-item active">
                         <i class="fas fa-random"></i>
-                     </div>
+                  </div>
                      <h3>Password Generator</h3>
                      <p>Create strong passwords</p>
                     </a>
@@ -168,16 +172,26 @@ $conn->close();
                     </a>
                 </div>
                 <div class="action-card orange">
+                <a href="analytics.php" class="nav-item active">
                     <div class="action-icon">
-                        <a href="analytics.html" class="nav-item active"></a>
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <h3>Analytics</h3>
                     <p>View security insights</p>
+                </a>
+                </div>
+                <div class="action-card red">
+                    <a href="notifications.html" class="nav-item active">
+                        <div class="action-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <h3>Notifications</h3>
+                        <p>Get your Updates</p>
+                    </a>
                 </div>
             </section>
 
-            <div class="dashboard-grid">
+            <!-- <div class="dashboard-grid">
                 <section class="recent-activities">
                     <div class="section-header">
                         <h2>Recent Activities</h2>
@@ -245,7 +259,7 @@ $conn->close();
                         </div>
                     </div>
                 </section>
-            </div>
+            </div> -->
         </main>
     </div>
 

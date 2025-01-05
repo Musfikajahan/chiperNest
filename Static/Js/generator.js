@@ -16,19 +16,25 @@ class PasswordGenerator {
         this.lowercaseCheck = checkboxes[1];
         this.numbersCheck = checkboxes[2];
         this.symbolsCheck = checkboxes[3];
+        
+        // Buttons
         this.refreshBtn = document.querySelector('.refresh-btn');
         this.copyBtn = document.querySelector('.copy-btn');
         this.saveBtn = document.querySelector('.save-btn');
+        
+        // Strength indicators
         this.strengthBar = document.querySelector('.strength-bar');
         this.strengthText = document.querySelector('.strength-text');
     }
 
     attachEventListeners() {
+        // Password length slider
         this.lengthSlider.addEventListener('input', () => {
             this.lengthValue.textContent = this.lengthSlider.value;
             this.generatePassword();
         });
 
+        // Character type checkboxes
         [this.uppercaseCheck, this.lowercaseCheck, this.numbersCheck, this.symbolsCheck]
             .forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
@@ -36,15 +42,20 @@ class PasswordGenerator {
                     this.generatePassword();
                 });
             });
+
+        // Manual password input
         this.passwordOutput.addEventListener('input', () => {
             this.validatePassword(this.passwordOutput.value);
         });
+
+        // Button actions
         this.refreshBtn.addEventListener('click', () => this.generatePassword());
         this.copyBtn.addEventListener('click', () => this.copyPassword());
         this.saveBtn.addEventListener('click', () => this.savePassword());
     }
 
     validateCheckboxes(changedCheckbox) {
+        // Ensure at least one checkbox remains checked
         const checkboxes = [this.uppercaseCheck, this.lowercaseCheck, this.numbersCheck, this.symbolsCheck];
         const checkedCount = checkboxes.filter(cb => cb.checked).length;
         
@@ -55,11 +66,13 @@ class PasswordGenerator {
     }
 
     validatePassword(password) {
+        // Update checkbox states based on password content
         this.uppercaseCheck.checked = /[A-Z]/.test(password);
         this.lowercaseCheck.checked = /[a-z]/.test(password);
         this.numbersCheck.checked = /[0-9]/.test(password);
         this.symbolsCheck.checked = /[^A-Za-z0-9]/.test(password);
 
+        // Update strength meter
         this.updateStrengthMeter(password);
     }
 
@@ -73,12 +86,14 @@ class PasswordGenerator {
             symbols: /[^A-Za-z0-9]/.test(password)
         };
 
+        // Calculate strength score
         strength += password.length >= 12 ? 25 : (password.length >= 8 ? 15 : 0);
         strength += checks.uppercase ? 20 : 0;
         strength += checks.lowercase ? 20 : 0;
         strength += checks.numbers ? 20 : 0;
         strength += checks.symbols ? 15 : 0;
 
+        // Update UI
         this.strengthBar.className = 'strength-bar';
         if (strength >= 80) {
             this.strengthBar.classList.add('very-strong');
@@ -176,6 +191,7 @@ class PasswordGenerator {
     copyPassword() {
         this.copyToClipboard(this.passwordOutput.value);
     }
+
     async savePassword(password = null) {
         try {
             const passwordToSave = password || this.passwordOutput.value;
@@ -195,7 +211,7 @@ class PasswordGenerator {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                credentials: 'include',  
+                credentials: 'include',  // Important for sending cookies
                 body: JSON.stringify({
                     password: passwordToSave,
                     website: website,
@@ -206,7 +222,8 @@ class PasswordGenerator {
             if (!response.ok) {
                 const errorData = await response.json();
                 if (response.status === 401) {
-                    window.location.href = '/login.html';
+                    // Redirect to login if unauthorized
+                    window.location.href = '/login.php';
                     return;
                 }
                 throw new Error(errorData.error || 'Failed to save password');
@@ -230,15 +247,17 @@ class PasswordGenerator {
             });
             
             if (!response.ok) {
-                window.location.href = '/login.html';
+                // Redirect to login page if not authenticated
+                window.location.href = '/login.php';
             }
         } catch (error) {
             console.error('Auth check failed:', error);
-            window.location.href = '/login.html';
+            window.location.href = '/login.php';
         }
     }
 }
 
+// Initialize the generator when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     new PasswordGenerator();
 });

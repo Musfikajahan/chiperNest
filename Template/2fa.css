@@ -1,3 +1,4 @@
+/* 2FA Setup specific styles */
 .setup-header {
     margin-bottom: 2rem;
 }
@@ -32,6 +33,7 @@
     margin: 0 auto;
 }
 
+/* Setup Steps */
 .setup-steps {
     display: flex;
     flex-direction: column;
@@ -83,6 +85,7 @@
     margin-bottom: 1rem;
 }
 
+/* App Options */
 .app-options {
     display: flex;
     gap: 1rem;
@@ -101,7 +104,10 @@
     border-radius: 0.5rem;
     transition: all 0.2s;
 }
-
+.app-option.selected {
+    border: 2px solid #007bff;
+    background-color: rgba(0, 123, 255, 0.1);
+}
 .app-option:hover {
     background-color: #f9fafb;
     border-color: #3b82f6;
@@ -112,6 +118,8 @@
     height: 48px;
     border-radius: 0.5rem;
 }
+
+/* QR Code */
 .qr-container {
     display: flex;
     flex-direction: column;
@@ -222,6 +230,7 @@
     border: 1px solid #e5e7eb;
     border-radius: 0.5rem;
 }
+
 .verify-btn {
     padding: 0.75rem;
     background-color: #3b82f6;
@@ -236,6 +245,8 @@
 .verify-btn:hover {
     background-color: #2563eb;
 }
+
+/* Backup Codes */
 .backup-codes {
     background-color: white;
     border-radius: 0.75rem;
@@ -264,6 +275,7 @@
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
+
 .code-item {
     padding: 0.75rem;
     background-color: #f9fafb;
@@ -292,30 +304,33 @@
     cursor: pointer;
     transition: all 0.2s;
 }
+
 .backup-actions button:hover {
     background-color: #f9fafb;
     border-color: #3b82f6;
 }
+/*=============*/
 .message-container {
     margin-top: 10px;
     padding: 10px;
     border-radius: 5px;
     text-align: center;
-    display: none; 
+    display: none; /* Initially hidden */
 }
 
 .message-container.success {
     background-color: #d4edda;
     color: #155724;
-    display: block; 
+    display: block; /* Show when a message is present */
 }
 
 .message-container.error {
     background-color: #f8d7da;
     color: #721c25;
-    display: block; 
+    display: block; /* Show when an error occurs */
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
     .setup-container {
         padding: 0 1rem;

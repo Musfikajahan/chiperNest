@@ -11,17 +11,20 @@ from flask import Flask, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/chipernest'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
+from database import db, app
 bcrypt = Bcrypt(app)
-#CORS(app)
-CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5000", "http://127.0.0.1:5000"]}})
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='2fa.log'
+)
+CORS(app, resources={r"/api/*": {
+    "origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization"],
+    "supports_credentials": True
+}})
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -35,6 +38,7 @@ class User(db.Model):
     # 2FA Fields
     two_fa_secret = db.Column(db.String(32), nullable=True)
     backup_codes = db.Column(db.Text, nullable=True)
+    # Security Tracking
     last_2fa_attempt = db.Column(db.DateTime, nullable=True)
     failed_attempts = db.Column(db.Integer, default=0)
 
@@ -51,8 +55,29 @@ class User(db.Model):
     def reset_failed_attempts(self):
         self.failed_attempts = 0
         self.last_2fa_attempt = None
-
+    @property
+    def has_2fa_enabled(self):
+        return self.two_fa_secret is not None
+    @app.before_request
+    def check_session():
+    # Skip auth check for specific endpoints
+        if request.endpoint and 'static' not in request.endpoint:
+            excluded_routes = ['login', 'register']
+            if request.endpoint not in excluded_routes and 'user_id' not in session:
+                return jsonify({"error": "Unauthorized"}), 401
 class TwoFactorAuth:
+    @app.route('/api/2fa/check-status')
+    def check_2fa_status():
+        if 'user_id' not in session:
+            return jsonify({"error": "Unauthorized"}), 401
+        user = User.query.get(session['user_id'])
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        return jsonify({
+            "enabled": user.has_2fa_enabled,
+            "setup_required": not user.has_2fa_enabled
+        }), 200
     @staticmethod
     def generate_secret():
         return pyotp.random_base32()
@@ -60,7 +85,10 @@ class TwoFactorAuth:
     @staticmethod
     def generate_backup_codes(count=6):
         return [secrets.token_hex(4) for _ in range(count)]
-    
+    @staticmethod
+    def verify_otp(secret, otp):
+        totp = pyotp.TOTP(secret)
+        return totp.verify(otp)
     @staticmethod
     def create_qr_code(secret, email):
         try:
@@ -95,28 +123,25 @@ class TwoFactorAuth:
             logging.error(f"QR Code Generation Error: {e}")
             return None
 
-@app.route('/api/2fa/generate', methods=['POST'])
+@app.route('/api/2fa/generate', methods=['POST', 'OPTIONS'])
 def generate_2fa_secret():
+    if request.method == 'OPTIONS':
+        return '', 204
+        
     try:
-        # Add request validation
-        if not request.is_json:
-            return jsonify({"error": "Missing JSON in request"}), 400
-            
-        email = request.json.get("email")
-        if not email or not isinstance(email, str):
-            return jsonify({"error": "Invalid email format"}), 400
-
-        user = User.query.filter_by(email=email).first()
+        if 'user_id' not in session:
+            logging.warning("Unauthorized 2FA generation attempt")
+            return jsonify({"error": "Not authenticated"}), 401
+        user = User.query.get(session['user_id'])
         if not user:
-            user = User(email=email)
-            db.session.add(user)
+            logging.error(f"User not found: {session['user_id']}")
+            return jsonify({"error": "User not found"}), 404
         
         secret = TwoFactorAuth.generate_secret()
+        qr_code = TwoFactorAuth.create_qr_code(secret, user.email)
         user.two_fa_secret = secret
         backup_codes = TwoFactorAuth.generate_backup_codes()
         user.backup_codes = backup_codes
-        
-        qr_code = TwoFactorAuth.create_qr_code(secret, email)
         if not qr_code:
             logging.error("QR code generation failed")
             return jsonify({"error": "Failed to generate QR code."}), 500
@@ -179,47 +204,49 @@ def validate_backup_code():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/2fa/setup', methods=['POST'])
+@app.route('/api/2fa/setup', methods=['POST', 'OPTIONS'])
 def setup_2fa():
-    try:
-        # Get user from session instead of email
-        user_id = session.get('user_id')
-        if not user_id:
-            return jsonify({"error": "Not authenticated"}), 401
+    if request.method == 'OPTIONS':
+        return '', 204
+        
+    if 'user_id' not in session:
+        return jsonify({"error": "Not authenticated"}), 401
 
-        user = User.query.get(user_id)
+    try:
+        user = User.query.get(session['user_id'])
         if not user:
             return jsonify({"error": "User not found"}), 404
-
-        # Generate new 2FA secret
+        
         secret = TwoFactorAuth.generate_secret()
-        backup_codes = TwoFactorAuth.generate_backup_codes()
-        
-        # Save to database
         user.two_fa_secret = secret
-        user.backup_codes = backup_codes
-        user.two_fa_enabled = False  
+        user.backup_codes = ','.join(TwoFactorAuth.generate_backup_codes())
         
-        # Generate QR code
+        db.session.commit()
+        
         qr_code = TwoFactorAuth.create_qr_code(secret, user.email)
         if not qr_code:
             return jsonify({"error": "Failed to generate QR code"}), 500
 
-        db.session.commit()
-        
         return jsonify({
             "secret": secret,
             "qr_code": qr_code,
-            "backup_codes": backup_codes
+            "backup_codes": user.backup_codes.split(',')
         }), 200
         
     except Exception as e:
         db.session.rollback()
-        logging.error(f"2FA setup error: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        return jsonify({"error": str(e)}), 500
 
-# Run the application
+def init_db():
+    try:
+        with app.app_context():
+            db.create_all()
+            logging.info("Database tables created successfully")
+    except Exception as e:
+        logging.error(f"Database initialization failed: {str(e)}")
+        raise
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

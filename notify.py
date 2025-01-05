@@ -1,73 +1,65 @@
 import os
-import enum
-from flask import Flask, render_template, jsonify, request, session
+from enum import Enum  
+from flask import Flask, jsonify, request, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from datetime import datetime
-from dotenv import load_dotenv
+import logging
+from database import db, app
 
-# Flask app
-load_dotenv()
-app = Flask(__name__, static_folder='static', template_folder='templates')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='notify.log'
+)
 
-# CORS and Database 
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'mysql+pymysql://root@localhost/ciphernest')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'fallback-secret-key')
+CORS(app, resources={r"/api/*": {
+    "origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+    "methods": ["GET", "POST", "DELETE"],
+    "allow_headers": ["Content-Type"]
+}})
 
-# Initialize extensions
-db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
-
-# Enum definitions
-class NotificationType(enum.Enum):
+class NotificationType(Enum):
     SECURITY_ALERT = "security_alert"
     PASSWORD_UPDATE = "password_update"
     LOGIN_ATTEMPT = "login_attempt"
     SYSTEM_UPDATE = "system_update"
-    TWO_FACTOR_AUTH = "2fa_recommendation"
-    WEAK_PASSWORD = "weak_password"
+    PASSWORD_STRENGTH = "password_strength"
+    PASSWORD_REUSE = "password_reuse"
+    TWO_FA_SETUP = "2fa_setup"
 
-class NotificationSeverity(enum.Enum):
-    URGENT = "urgent"
-    WARNING = "warning"
-    INFO = "info"
-
-# Database Models
 class Notification(db.Model):
     __tablename__ = 'notifications'
-    
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    type = db.Column(db.Enum(NotificationType), nullable=False)
-    severity = db.Column(db.Enum(NotificationSeverity), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
+    type = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    action_url = db.Column(db.String(200), nullable=True)
-    action_text = db.Column(db.String(50), nullable=True)
+    severity = db.Column(db.String(20), nullable=True)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     dismissed = db.Column(db.Boolean, default=False)
+    action_url = db.Column(db.String(255), nullable=True)
+    action_text = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
     def to_dict(self):
         return {
             'id': self.id,
-            'type': self.type.value,
-            'severity': self.severity.value,
+            'type': self.type,
             'title': self.title,
             'message': self.message,
+            'severity': self.severity,
+            'is_read': self.is_read,
+            'dismissed': self.dismissed,
             'action_url': self.action_url,
             'action_text': self.action_text,
-            'is_read': self.is_read,
-            'created_at': self.created_at.isoformat(),
-            'dismissed': self.dismissed
+            'created_at': self.created_at.isoformat()
         }
 
 class NotificationPreferences(db.Model):
-    __tablename__ = 'notification_preferences'
-    
+    __tablename__ = 'user_settings'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     security_alerts = db.Column(db.Boolean, default=True)
@@ -83,15 +75,31 @@ class NotificationPreferences(db.Model):
             'email_notifications': self.email_notifications
         }
 
-# Routes
+def create_notification(user_id, type, title, message, severity="info", action_url=None, action_text=None):
+    try:
+        notification = Notification(
+            user_id=user_id,
+            type=type,
+            title=title,
+            message=message,
+            severity=severity,
+            action_url=action_url,
+            action_text=action_text
+        )
+        db.session.add(notification)
+        db.session.commit()
+        return notification
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Create notification error: {str(e)}")
+        return None
 @app.route('/api/notifications', methods=['GET'])
 def get_notifications():
     if 'user_id' not in session:
         return jsonify({'error': 'Unauthorized'}), 401
     
-    filter_type = request.args.get('filter', 'all')
-    
     try:
+        filter_type = request.args.get('type', 'all')
         query = Notification.query.filter_by(
             user_id=session['user_id'],
             dismissed=False
@@ -175,7 +183,7 @@ def manage_preferences():
         
         return jsonify(prefs.to_dict()), 200
     
-    else:  # POST
+    else: 
         try:
             data = request.json
             prefs = NotificationPreferences.query.filter_by(

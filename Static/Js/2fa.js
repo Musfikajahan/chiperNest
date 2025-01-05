@@ -2,7 +2,6 @@ class TwoFactorAuth {
     constructor() {
         this.initializeElements();
         this.attachEventListeners();
-        this.generateQRCode(); 
     }
 
     initializeElements() {
@@ -11,8 +10,6 @@ class TwoFactorAuth {
         this.verifyButton = document.querySelector(".verify-btn");
         this.otpInput = document.querySelector(".code-input input");
         this.messageContainer = document.querySelector(".message-container");
-        this.emailInput = document.querySelector("#email-input") || null;
-        this.generateButton = document.querySelector("#generate-2fa-btn");
         this.downloadCodesButton = document.querySelector(".download-btn");
         this.printCodesButton = document.querySelector(".print-btn");
         this.loadingSpinner = document.querySelector(".loading-spinner");
@@ -20,19 +17,67 @@ class TwoFactorAuth {
         this.manualKeyContainer = document.querySelector(".manual-key-container");
         this.manualKeyInput = document.querySelector(".manual-key");
         this.copyKeyBtn = document.querySelector(".copy-key-btn");
-
-        if (!this.emailInput) {
-            console.error("Email input field is missing in the DOM.");
+        this.steps = document.querySelectorAll('.step');
+        this.appOptions = document.querySelectorAll('.app-option');
+    }
+//====================================
+    async setup2FA() {
+        try {
+            const response = await fetch('/api/2fa/setup', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+    
+            if (!response.ok) {
+                throw new Error('Setup failed');
+            }
+    
+            const data = await response.json();
+            // Handle successful setup
+            return data;
+        } catch (error) {
+            console.error('2FA setup failed:', error);
+            throw error;
         }
     }
+    selectAuthenticator(selectedOption) {
+        this.appOptions.forEach(option => {
+            option.classList.remove('selected');
+        });
+        selectedOption.classList.add('selected');
+        this.generateQRCode().then(() => {
+            this.moveToNextStep();
+        }).catch(error => {
+            this.displayMessage('Failed to generate QR code', true);
+        });
+    }
 
+    moveToNextStep() {
+        const currentStep = document.querySelector('.step.active');
+        if (!currentStep) return;
+        const nextStep = currentStep.nextElementSibling;
+        if (nextStep) {
+            currentStep.classList.remove('active');
+            nextStep.classList.add('active');
+        }
+    }
+    //====================================
     attachEventListeners() {
         this.verifyButton?.addEventListener("click", () => this.verifyOTP());
-        this.generateButton?.addEventListener("click", () => this.generate2FA());
         this.downloadCodesButton?.addEventListener("click", () => this.downloadBackupCodes());
         this.printCodesButton?.addEventListener("click", () => this.printBackupCodes());
         this.manualKeyBtn?.addEventListener("click", () => this.toggleManualKey());
         this.copyKeyBtn?.addEventListener("click", () => this.copyManualKey());
+        //=======================
+        this.appOptions?.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent navigation
+                this.selectAuthenticator(option);
+            });
+        });
     }
 
     displayMessage(message, isError = false) {
@@ -48,131 +93,43 @@ class TwoFactorAuth {
         }, 5000);
     }
 
-    validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    async generate2FA() {
-        const BASE_URL = "http://127.0.0.1:5000"; 
-        const loadingSpinner = document.querySelector('.loading-spinner');
-
-        try {
-            const email = this.emailInput?.value.trim();
-            if (!email) {
-                this.displayMessage("Please enter an email address.", true);
-                return;
-            }
-            if (!this.validateEmail(email)) {
-                this.displayMessage("Please enter a valid email address.", true);
-                return;
-            }
-
-            this.generateButton.disabled = true;
-            this.generateButton.textContent = "Generating...";
-
-            const response = await fetch(`${BASE_URL}/api/2fa/generate`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
-
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || "Failed to generate 2FA.");
-            }
-            if (!data.qr_code) {
-                throw new Error("QR Code missing from response.");
-            }
-
-            loadingSpinner.style.display = 'block';
-            await this.updateQRCode(data.qr_code);
-            this.updateBackupCodes(data.backup_codes);
-
-            const currentStep = document.querySelector('.step.active');
-            const nextStep = currentStep.nextElementSibling;
-            if (nextStep) {
-                currentStep.classList.remove('active');
-                nextStep.classList.add('active');
-            }
-            this.displayMessage("2FA setup successful! Scan QR code and save backup codes.");
-        } catch (error) {
-            console.error("Error generating 2FA:", error);
-            this.displayMessage(error.message, true);
-        } finally {
-            this.generateButton.disabled = false;
-            this.generateButton.textContent = "Generate 2FA";
-            loadingSpinner.style.display = 'none';
-        }
-    }
-
-    async verifyOTP() {
-        const BASE_URL = "http://127.0.0.1:5000"; 
-
-        try {
-            const otp = this.otpInput?.value.trim();
-            const email = this.emailInput?.value.trim();
-
-            if (!email) {
-                this.displayMessage("Please enter your email.", true);
-                return;
-            }
-            if (!otp) {
-                this.displayMessage("Please enter the OTP.", true);
-                return;
-            }
-
-            this.verifyButton.disabled = true;
-            this.verifyButton.textContent = "Verifying...";
-
-            const response = await fetch(`${BASE_URL}/api/2fa/verify`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, otp }),
-            });
-
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.error || "Invalid OTP.");
-            }
-
-            this.displayMessage(data.message);
-            this.otpInput.value = '';
-        } catch (error) {
-            console.error("Error verifying OTP:", error);
-            this.displayMessage(error.message, true);
-        } finally {
-            this.verifyButton.disabled = false;
-            this.verifyButton.textContent = "Verify & Enable 2FA";
-        }
-    }
-
     async generateQRCode() {
         try {
             this.loadingSpinner.style.display = 'block';
-            const response = await fetch('http://127.0.0.1:5000/api/2fa/setup', {
+            const email = this.emailInput?.value.trim();
+            const response = await fetch('http://127.0.0.1:5000/api/2fa/generate', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
-            });
+                headers: { 'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({ email })
+            }); 
 
             if (!response.ok) {
                 throw new Error('Failed to generate 2FA setup');
             }
-
             const data = await response.json();
-            await this.updateQRCode(data.qr_code);
-            this.updateBackupCodes(data.backup_codes);
+        
+        if (!data.qr_code) {
+            throw new Error('No QR code in response');
+        }
+
+        this.qrImage.src = `data:image/png;base64,${data.qr_code}`;
+        this.qrImage.style.display = 'block';
+        this.updateBackupCodes(data.backup_codes);
+        
+        if (data.secret) {
             this.manualKeyInput.value = data.secret;
             this.secret = data.secret;
-
-        } catch (error) {
-            this.displayMessage('Failed to generate 2FA setup', true);
-            console.error(error);
-        } finally {
-            this.loadingSpinner.style.display = 'none';
         }
+
+    } catch (error) {
+        console.error('QR Generation error:', error);
+        this.displayMessage('Failed to generate QR code', true);
+    } finally {
+        this.loadingSpinner.style.display = 'none';
     }
+}
 
     toggleManualKey() {
         const isHidden = this.manualKeyContainer.style.display === 'none';

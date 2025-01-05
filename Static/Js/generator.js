@@ -2,173 +2,243 @@ class PasswordGenerator {
     constructor() {
         this.initializeElements();
         this.attachEventListeners();
-        this.generatePassword(); // Generate initial password on load
+        this.generatePassword(); 
+        this.checkAuthentication(); 
     }
 
     initializeElements() {
-        // Slider and display for password length
         this.lengthSlider = document.getElementById('lengthSlider');
         this.lengthValue = document.querySelector('.length-value');
         this.passwordOutput = document.getElementById('passwordOutput');
-
-        // Checkbox elements
-        this.uppercaseCheck = document.querySelector('input[type="checkbox"]:nth-of-type(1)');
-        this.lowercaseCheck = document.querySelector('input[type="checkbox"]:nth-of-type(2)');
-        this.numbersCheck = document.querySelector('input[type="checkbox"]:nth-of-type(3)');
-        this.symbolsCheck = document.querySelector('input[type="checkbox"]:nth-of-type(4)');
-
-        // Buttons
+        
+        const checkboxes = document.querySelectorAll('.checkbox-container input[type="checkbox"]');
+        this.uppercaseCheck = checkboxes[0];
+        this.lowercaseCheck = checkboxes[1];
+        this.numbersCheck = checkboxes[2];
+        this.symbolsCheck = checkboxes[3];
         this.refreshBtn = document.querySelector('.refresh-btn');
         this.copyBtn = document.querySelector('.copy-btn');
         this.saveBtn = document.querySelector('.save-btn');
+        this.strengthBar = document.querySelector('.strength-bar');
+        this.strengthText = document.querySelector('.strength-text');
     }
 
     attachEventListeners() {
-        // Update length value on slider input
-        this.lengthSlider.addEventListener('input', () => this.updateLengthValue());
-
-        // Validate user-edited password on Enter key
-        this.passwordOutput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                this.validateUserPassword();
-            }
+        this.lengthSlider.addEventListener('input', () => {
+            this.lengthValue.textContent = this.lengthSlider.value;
+            this.generatePassword();
         });
 
-        // Update strength meter on user input without alerts
+        [this.uppercaseCheck, this.lowercaseCheck, this.numbersCheck, this.symbolsCheck]
+            .forEach(checkbox => {
+                checkbox.addEventListener('change', () => {
+                    this.validateCheckboxes(checkbox);
+                    this.generatePassword();
+                });
+            });
         this.passwordOutput.addEventListener('input', () => {
-            this.updateStrengthMeter(this.passwordOutput.value);
+            this.validatePassword(this.passwordOutput.value);
         });
-
-        // Button actions
         this.refreshBtn.addEventListener('click', () => this.generatePassword());
         this.copyBtn.addEventListener('click', () => this.copyPassword());
         this.saveBtn.addEventListener('click', () => this.savePassword());
     }
 
-    updateLengthValue() {
-        this.lengthValue.textContent = this.lengthSlider.value;
+    validateCheckboxes(changedCheckbox) {
+        const checkboxes = [this.uppercaseCheck, this.lowercaseCheck, this.numbersCheck, this.symbolsCheck];
+        const checkedCount = checkboxes.filter(cb => cb.checked).length;
+        
+        if (checkedCount === 0) {
+            changedCheckbox.checked = true;
+            alert('At least one character type must be selected');
+        }
+    }
+
+    validatePassword(password) {
+        this.uppercaseCheck.checked = /[A-Z]/.test(password);
+        this.lowercaseCheck.checked = /[a-z]/.test(password);
+        this.numbersCheck.checked = /[0-9]/.test(password);
+        this.symbolsCheck.checked = /[^A-Za-z0-9]/.test(password);
+
+        this.updateStrengthMeter(password);
+    }
+
+    updateStrengthMeter(password) {
+        let strength = 0;
+        const checks = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            numbers: /[0-9]/.test(password),
+            symbols: /[^A-Za-z0-9]/.test(password)
+        };
+
+        strength += password.length >= 12 ? 25 : (password.length >= 8 ? 15 : 0);
+        strength += checks.uppercase ? 20 : 0;
+        strength += checks.lowercase ? 20 : 0;
+        strength += checks.numbers ? 20 : 0;
+        strength += checks.symbols ? 15 : 0;
+
+        this.strengthBar.className = 'strength-bar';
+        if (strength >= 80) {
+            this.strengthBar.classList.add('very-strong');
+            this.strengthText.textContent = 'Very Strong';
+        } else if (strength >= 60) {
+            this.strengthBar.classList.add('strong');
+            this.strengthText.textContent = 'Strong';
+        } else if (strength >= 40) {
+            this.strengthBar.classList.add('medium');
+            this.strengthText.textContent = 'Medium';
+        } else {
+            this.strengthBar.classList.add('weak');
+            this.strengthText.textContent = 'Weak';
+        }
     }
 
     async generatePassword() {
         try {
+            const options = {
+                length: parseInt(this.lengthSlider.value),
+                use_uppercase: this.uppercaseCheck.checked,
+                use_lowercase: this.lowercaseCheck.checked,
+                use_numbers: this.numbersCheck.checked,
+                use_symbols: this.symbolsCheck.checked
+            };
+
             const response = await fetch('http://127.0.0.1:5000/generate-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({
-                    length: parseInt(this.lengthSlider.value),
-                    use_uppercase: this.uppercaseCheck.checked,
-                    use_lowercase: this.lowercaseCheck.checked,
-                    use_numbers: this.numbersCheck.checked,
-                    use_symbols: this.symbolsCheck.checked,
-                }),
+                credentials: 'include',
+                body: JSON.stringify(options)
             });
+
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(`Failed to generate password: ${error.error}`);
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to generate password');
+                } else {
+                    throw new Error('Server returned non-JSON response');
+                }
             }
 
             const data = await response.json();
             this.passwordOutput.value = data.password;
-            this.updateStrengthMeter(data.password);
+            this.validatePassword(data.password);
+            this.addToHistory(data.password);
+
         } catch (error) {
-            console.error('Error generating password:', error);
-            alert('Error generating password. Please try again.');
+            console.error('Generate password error:', error);
+            this.passwordOutput.value = '';
+            this.updateStrengthMeter('');
+            alert(error.message);
         }
     }
 
-    validateUserPassword() {
-        const password = this.passwordOutput.value;
-        const length = password.length;
-        const containsUppercase = /[A-Z]/.test(password);
-        const containsLowercase = /[a-z]/.test(password);
-        const containsNumbers = /[0-9]/.test(password);
-        const containsSymbols = /[^A-Za-z0-9]/.test(password);
+    addToHistory(password) {
+        const historyList = document.querySelector('.history-list');
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+            <span class="password-text">${password}</span>
+            <div class="history-actions">
+                <button title="Copy password"><i class="fas fa-copy"></i></button>
+                <button title="Save to vault"><i class="fas fa-save"></i></button>
+            </div>
+        `;
 
-        // Validation checks
-        if (length < parseInt(this.lengthSlider.value)) {
-            alert(`Password must be at least ${this.lengthSlider.value} characters long.`);
+        // Add at the top of the list
+        historyList.insertBefore(historyItem, historyList.firstChild);
+        
+        // Remove oldest item if more than 3
+        if (historyList.children.length > 3) {
+            historyList.removeChild(historyList.lastChild);
         }
-        if (this.uppercaseCheck.checked && !containsUppercase) {
-            alert('Password must contain at least one uppercase letter.');
-        }
-        if (this.lowercaseCheck.checked && !containsLowercase) {
-            alert('Password must contain at least one lowercase letter.');
-        }
-        if (this.numbersCheck.checked && !containsNumbers) {
-            alert('Password must contain at least one number.');
-        }
-        if (this.symbolsCheck.checked && !containsSymbols) {
-            alert('Password must contain at least one special character.');
-        }
+
+        // Add event listeners to new history item buttons
+        const [copyBtn, saveBtn] = historyItem.querySelectorAll('button');
+        copyBtn.addEventListener('click', () => this.copyToClipboard(password));
+        saveBtn.addEventListener('click', () => this.savePassword(password));
     }
 
-    updateStrengthMeter(password) {
-        const strengthBar = document.querySelector('.strength-bar');
-        const strengthText = document.querySelector('.strength-text');
-
-        let strength = 0;
-        strength += Math.min(password.length * 4, 40); // Length
-        if (/[A-Z]/.test(password)) strength += 15; // Uppercase
-        if (/[a-z]/.test(password)) strength += 15; // Lowercase
-        if (/[0-9]/.test(password)) strength += 15; // Numbers
-        if (/[^A-Za-z0-9]/.test(password)) strength += 15; // Symbols
-
-        // Update UI based on strength
-        strengthBar.className = 'strength-bar'; // Reset classes
-        if (strength < 40) {
-            strengthBar.classList.add('weak');
-            strengthText.textContent = 'Weak';
-        } else if (strength < 60) {
-            strengthBar.classList.add('medium');
-            strengthText.textContent = 'Medium';
-        } else if (strength < 80) {
-            strengthBar.classList.add('strong');
-            strengthText.textContent = 'Strong';
-        } else {
-            strengthBar.classList.add('very-strong');
-            strengthText.textContent = 'Very Strong';
-        }
-    }
-
-    async copyPassword() {
+    async copyToClipboard(text) {
         try {
-            await navigator.clipboard.writeText(this.passwordOutput.value);
+            await navigator.clipboard.writeText(text);
             alert('Password copied to clipboard!');
-        } catch (error) {
-            console.error('Error copying password:', error);
-            alert('Failed to copy password.');
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy password');
         }
     }
 
-    async savePassword() {
+    copyPassword() {
+        this.copyToClipboard(this.passwordOutput.value);
+    }
+    async savePassword(password = null) {
         try {
+            const passwordToSave = password || this.passwordOutput.value;
+            if (!passwordToSave) {
+                throw new Error('No password to save');
+            }
+
+            const website = prompt('Enter website name:');
+            const username = prompt('Enter username:');
+
+            if (!website || !username) {
+                throw new Error('Website and username are required');
+            }
+
             const response = await fetch('http://127.0.0.1:5000/save-password', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'include',  
                 body: JSON.stringify({
-                    password: this.passwordOutput.value,
-                }),
+                    password: passwordToSave,
+                    website: website,
+                    username: username
+                })
             });
 
             if (!response.ok) {
-                throw new Error(`Failed to save password: ${response.statusText}`);
+                const errorData = await response.json();
+                if (response.status === 401) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                throw new Error(errorData.error || 'Failed to save password');
             }
 
             const data = await response.json();
             alert('Password saved successfully!');
+            return data;
+
         } catch (error) {
-            console.error('Error saving password:', error);
-            alert('Failed to save password.');
+            console.error('Save password error:', error);
+            alert(error.message);
+            throw error;
+        }
+    }
+
+    async checkAuthentication() {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/api/check-auth', {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                window.location.href = '/login.html';
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            window.location.href = '/login.html';
         }
     }
 }
 
-// Initialize the Password Generator when the DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new PasswordGenerator();
 });

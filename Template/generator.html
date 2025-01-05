@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="generator.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="../Static/Js/generator.js" defer></script>
 </head>
 <body>
     <div class="container">
@@ -17,13 +18,15 @@
                 <h1>ChiperNest</h1>
             </div>
            
-            <button class="add-password-btn">
-                <i class="fas fa-plus"></i>
-                <span>Add Password</span>
-            </button>
+            <a href="password_form.php">
+                <button class="add-password-btn">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Password</span>
+                </button>
+            </a>
 
             <nav class="nav-menu">
-                <a href="index.html" class="nav-item">
+                <a href="index.php" class="nav-item">
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </a>
@@ -35,7 +38,11 @@
                     <i class="fas fa-random"></i>
                     <span>Generator</span>
                 </a>
-                <a href="analytics.html" class="nav-item">
+                <a href="Securitycheck.html" class="nav-item ">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security Check</span>
+                </a>
+                <a href="analytics.php" class="nav-item">
                     <i class="fas fa-chart-line"></i>
                     <span>Analytics</span>
                 </a>
@@ -43,7 +50,7 @@
                     <i class="fas fa-bell"></i>
                     <span>Notifications</span>
                 </a>
-                <a href="settings.html" class="nav-item">
+                <a href="settings.php" class="nav-item">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
                 </a>
@@ -68,30 +75,30 @@
             <div class="generator-container">
                 <div class="password-display">
                     <div class="generated-password">
-                        <input type="text" id="passwordOutput" readonly value="P@ssw0rd123!">
+                        <input type="text" id="passwordOutput" value="" placeholder="Generated password will appear here" spellcheck="false">
                         <div class="password-actions">
-                            <button class="refresh-btn" title="Generate new password">
+                            <button class="refresh-btn" id="generateBtn" title="Generate new password">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
-                            <button class="copy-btn" title="Copy password">
+                            <button class="copy-btn" id="copyBtn" title="Copy password">
                                 <i class="fas fa-copy"></i>
                             </button>
-                            <button class="save-btn" title="Save to vault">
+                            <button class="save-btn" id="saveBtn" title="Save to vault">
                                 <i class="fas fa-save"></i>
                             </button>
                         </div>
                     </div>
                     <div class="password-strength">
                         <div class="strength-meter">
-                            <div class="strength-bar very-strong"></div>
+                            <div class="strength-bar"></div>
                         </div>
-                        <span class="strength-text">Very Strong</span>
+                        <span class="strength-text">Password Strength</span>
                     </div>
                 </div>
 
                 <div class="generator-options">
                     <div class="option-group">
-                        <label>Password Length</label>
+                        <label for="lengthSlider">Password Length</label>
                         <div class="length-control">
                             <input type="range" id="lengthSlider" min="8" max="64" value="16">
                             <span class="length-value">16</span>
@@ -100,25 +107,25 @@
 
                     <div class="options-grid">
                         <label class="checkbox-container">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="uppercaseCheck" checked>
                             <span class="checkbox-label">Uppercase Letters</span>
                             <span class="example">ABCDEFGH</span>
                         </label>
                         
                         <label class="checkbox-container">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="lowercaseCheck" checked>
                             <span class="checkbox-label">Lowercase Letters</span>
                             <span class="example">abcdefgh</span>
                         </label>
 
                         <label class="checkbox-container">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="numbersCheck" checked>
                             <span class="checkbox-label">Numbers</span>
                             <span class="example">12345678</span>
                         </label>
 
                         <label class="checkbox-container">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="symbolsCheck" checked>
                             <span class="checkbox-label">Special Characters</span>
                             <span class="example">!@#$%^&*</span>
                         </label>
@@ -128,39 +135,7 @@
                 <div class="password-history">
                     <h3>Recently Generated</h3>
                     <div class="history-list">
-                        <div class="history-item">
-                            <span class="password-text">Kj#9mP$2vL</span>
-                            <div class="history-actions">
-                                <button title="Copy password">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                                <button title="Save to vault">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="history-item">
-                            <span class="password-text">Nh7$pQ#9mX</span>
-                            <div class="history-actions">
-                                <button title="Copy password">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                                <button title="Save to vault">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="history-item">
-                            <span class="password-text">Rt5#kL$8nB</span>
-                            <div class="history-actions">
-                                <button title="Copy password">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                                <button title="Save to vault">
-                                    <i class="fas fa-save"></i>
-                                </button>
-                            </div>
-                        </div>
+                        <!-- History items will be dynamically added here by JavaScript -->
                     </div>
                 </div>
             </div>

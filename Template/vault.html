@@ -17,13 +17,15 @@
                 <h1>ChiperNest</h1>
             </div>
             
-            <button class="add-password-btn" id="addPasswordBtn">
-                <i class="fas fa-plus"></i>
-                <span>Add Password</span>
-            </button>
+            <a href="password_form.php">
+                <button class="add-password-btn">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Password</span>
+                </button>
+            </a>
 
             <nav class="nav-menu">
-                <a href="index.html" class="nav-item">
+                <a href="index.php" class="nav-item">
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </a>
@@ -35,7 +37,11 @@
                     <i class="fas fa-random"></i>
                     <span>Generator</span>
                 </a>
-                <a href="analytics.html" class="nav-item">
+                <a href="Securitycheck.html" class="nav-item ">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security Check</span>
+                </a>
+                <a href="analytics.php" class="nav-item">
                     <i class="fas fa-chart-line"></i>
                     <span>Analytics</span>
                 </a>
@@ -43,7 +49,7 @@
                     <i class="fas fa-bell"></i>
                     <span>Notifications</span>
                 </a>
-                <a href="settings.html" class="nav-item">
+                <a href="settings.php" class="nav-item">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
                 </a>
@@ -85,32 +91,7 @@
             </div>
 
             <div class="password-grid">
-                <!-- Password Cards -->
-                <div class="password-card">
-                    <div class="card-header">
-                        <img src="https://www.google.com/favicon.ico" alt="Google">
-                        <div class="card-title">
-                            <h3>Google</h3>
-                            <p>user@example.com</p>
-                        </div>
-                        <button class="more-btn">
-                            <i class="fas fa-ellipsis-v"></i>
-                        </button>
-                    </div>
-                    <div class="card-actions">
-                        <span class="last-updated">Updated 2 days ago</span>
-                        <div class="action-buttons">
-                            <button title="Copy password">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                            <button title="Visit website">
-                                <i class="fas fa-external-link-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- More password cards... -->
+                <!-- Password cards will be dynamically inserted here by JavaScript -->
             </div>
         </main>
     </div>
@@ -147,5 +128,6 @@
             </form>
         </div>
     </div>
+    <script src="../Static/Js/vault.js"></script>
 </body>
 </html>

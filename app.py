@@ -1,48 +1,85 @@
-from flask import Flask, jsonify, request, render_template, session
+from flask import Flask, jsonify, request, render_template, session, url_for, redirect
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import secrets
 import string
 import logging
-import pyotp
-import qrcode
-from io import BytesIO
 import os
-from flask_sqlalchemy import SQLAlchemy
+from functools import wraps
 from flask_bcrypt import Bcrypt
+from flask import abort
 from datetime import datetime, timedelta
-import mysql.connector
-app = Flask(__name__, static_folder='static', template_folder='templates')
-CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
+from database import db, app
+import redis
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return abort(401)
+        return f(*args, **kwargs)
+    return decorated_function
+# Configure logging properly
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filename='generator.log'
+)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://username:your_password@localhost/database_name'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
-CORS(app)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5000", "http://127.0.0.1:5000", "YOUR_PRODUCTION_DOMAIN"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
+
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    storage_uri="memory://", 
+    default_limits=["200 per day", "50 per hour"]
+)
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.Text, nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reset_token_hash = db.Column(db.String(64), nullable=True)
+    reset_token_expires_at = db.Column(db.DateTime, nullable=True)
+    two_fa_secret = db.Column(db.String(32), nullable=True)
+    backup_codes = db.Column(db.Text, nullable=True)
 class Password(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'passwords'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     website = db.Column(db.String(255), nullable=False)
     username = db.Column(db.String(255), nullable=False)
-    password = db.Column(db.String(255), nullable=False)
-    logo_url = db.Column(db.String(255), nullable=True)
-    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
-
+    password = db.Column(db.Text, nullable=False)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     def to_dict(self):
         return {
             "id": self.id,
             "website": self.website,
             "username": self.username,
             "password": self.password,
-            "logo_url": self.logo_url,
+            #"logo_url": self.logo_url,
             "last_updated": self.last_updated
         }
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    two_fa_secret = db.Column(db.String(32), nullable=True)
-    backup_codes = db.Column(db.JSON, nullable=True)
-    last_2fa_attempt = db.Column(db.DateTime, nullable=True)
-    failed_attempts = db.Column(db.Integer, default=0)
+    
+class PasswordAnalytics(db.Model):
+    __tablename__ = 'password_analytics'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    strength_category = db.Column(db.String(50), nullable=True)
+    reuse_count = db.Column(db.Integer, default=0)
+    vulnerabilities = db.Column(db.Integer, default=0)
 
     def increment_failed_attempts(self):
         self.failed_attempts += 1
@@ -59,57 +96,84 @@ class User(db.Model):
         self.failed_attempts = 0
         self.last_2fa_attempt = None
 
-
 #====================================Password Vault Page=============================================
 
 @app.route('/vault')
 def vault():
-    return render_template('vault.html')
+    try:
+        return render_template('vault.html')
+    except Exception as e:
+        logging.error(f"Error loading vault page: {e}")
+        return "Error loading vault page", 500
 
 @app.route('/api/passwords', methods=['GET'])
+@login_required
 def get_passwords():
     try:
-        passwords = Password.query.all()
-        return jsonify([password.to_dict() for password in passwords]), 200
+        current_user_id = session.get('user_id')
+        if not current_user_id:
+            return jsonify({"error": "User not authenticated"}), 401
+            
+        passwords = Password.query.filter_by(user_id=current_user_id).order_by(Password.last_updated.desc()).all()
+        
+        return jsonify({
+            "message": "Passwords retrieved successfully",
+            "passwords": [password.to_dict() for password in passwords]
+        }), 200
+        
     except Exception as e:
-        return jsonify({"error": "Failed to fetch passwords.", "details": str(e)}), 500
+        logging.error(f"Database error in get_passwords: {str(e)}")
+        return jsonify({"error": "Failed to fetch passwords"}), 500
 
 @app.route('/api/passwords', methods=['POST'])
 def add_password():
     try:
         data = request.get_json()
-        website = data.get("website")
-        username = data.get("username")
-        password = data.get("password")
-       # logo_url = f"https://www.google.com"  
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        required_fields = ['website', 'username', 'password']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
         new_password = Password(
-            website=website,
-            username=username,
-            password=password,
-            #logo_url=logo_url
+            website=data['website'],
+            username=data['username'],
+            password=data['password']
         )
+        
         db.session.add(new_password)
         db.session.commit()
+        
+        logging.info(f"Password added for website: {data['website']}")
+        return jsonify({"message": "Password added successfully", "id": new_password.id}), 201
 
-        return jsonify({"message": "Password added successfully!"}), 201
     except Exception as e:
-        return jsonify({"error": "Failed to add password.", "details": str(e)}), 500
+        db.session.rollback()
+        logging.error(f"Failed to add password: {e}")
+        return jsonify({"error": "Failed to add password"}), 500
 
 @app.route('/api/passwords/<int:password_id>', methods=['DELETE'])
+@login_required
 def delete_password(password_id):
     try:
-        password = Password.query.get(password_id)
-        if password:
-            db.session.delete(password)
-            db.session.commit()
-            return jsonify({"message": "Password deleted successfully!"}), 200
-        else:
-            return jsonify({"error": "Password not found."}), 404
+        current_user_id = session.get('user_id')
+        password = Password.query.get_or_404(password_id)
+        if password.user_id != current_user_id:
+            return jsonify({"error": "Unauthorized"}), 403
+            
+        db.session.delete(password)
+        db.session.commit()
+        
+        return jsonify({"message": "Password deleted successfully"}), 200
+
     except Exception as e:
-        return jsonify({"error": "Failed to delete password.", "details": str(e)}), 500
+        db.session.rollback()
+        logging.error(f"Failed to delete password {password_id}: {e}")
+        return jsonify({"error": "Failed to delete password"}), 500
 
 #====================================Generate Random Password========================================
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def generate_password(length=8, use_uppercase=True, use_lowercase=True, use_numbers=True, use_symbols=True):
     char_set = ""
@@ -132,227 +196,192 @@ def generate_password(length=8, use_uppercase=True, use_lowercase=True, use_numb
 def home():
     return render_template('generator.html')
 
-@app.route('/generate-password', methods=['POST'])
+# Update the generate-password route
+@app.route('/generate-password', methods=['POST', 'OPTIONS'])
 def generate_password_api():
     try:
-        logging.info("Password generation request received.")
+        if request.method == 'OPTIONS':
+            response = app.make_default_options_response()
+            return response
+
         data = request.get_json()
-        if not data:
-            return jsonify({"error": "Invalid JSON request."}), 400
+        print("Received data:", data)  
 
-        length = data.get('length')
-        if not isinstance(length, int) or length < 8 or length > 64:
-            return jsonify({"error": "Password length must be an integer between 8 and 64."}), 400
 
-        use_uppercase = data.get('use_uppercase', True)
-        use_lowercase = data.get('use_lowercase', True)
-        use_numbers = data.get('use_numbers', True)
-        use_symbols = data.get('use_symbols', True)
+        length = int(data.get('length', 12)) if data else 12
+        use_uppercase = data.get('use_uppercase', True) if data else True
+        use_lowercase = data.get('use_lowercase', True) if data else True
+        use_numbers = data.get('use_numbers', True) if data else True
+        use_symbols = data.get('use_symbols', True) if data else True
 
-        if not any([use_uppercase, use_lowercase, use_numbers, use_symbols]):
-            return jsonify({"error": "At least one character set must be selected."}), 400
+        password = generate_password(
+            length=length,
+            use_uppercase=use_uppercase,
+            use_lowercase=use_lowercase,
+            use_numbers=use_numbers,
+            use_symbols=use_symbols
+        )
+        
+        response = jsonify({"password": password})
+        return response
 
-        password = generate_password(length, use_uppercase, use_lowercase, use_numbers, use_symbols)
-        logging.info("Password generated successfully.")
-        return jsonify({"password": password}), 200
-
-    except ValueError as e:
-        logging.error(f"Validation error: {e}")
-        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
-        return jsonify({"error": "An unexpected error occurred."}), 500
+        print(f"Error in generate_password_api: {str(e)}")  # Debug print
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/save-password', methods=['POST'])
+def calculate_strength(password):
+    """Calculate password strength score"""
+    strength = 0
+    criteria = {
+        'length': len(password) >= 12,
+        'uppercase': any(c.isupper() for c in password),
+        'lowercase': any(c.islower() for c in password),
+        'numbers': any(c.isdigit() for c in password),
+        'symbols': any(not c.isalnum() for c in password)
+    }
+    return sum(criteria.values()) * 20  
+
+
+@app.route('/save-password', methods=['POST', 'OPTIONS'])
+@login_required  
 def save_password():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
     try:
-        logging.info("Save password request received.")
         data = request.get_json()
+        print("Received save password request:", data)  
         if not data:
-            return jsonify({"error": "Invalid JSON request."}), 400
+            return jsonify({"error": "No data provided"}), 400
 
-        website = data.get('website')
-        username = data.get('username')
-        password = data.get('password')
-        if not password or len(password) < 8:
-            return jsonify({"error": "Invalid password. Password must be at least 8 characters long."}), 400
+        if not all(k in data for k in ['website', 'username', 'password']):
+            return jsonify({"error": "Missing required fields"}), 400
 
-        #logo_url = f"https://www.google.com"  
+        current_user_id = session.get('user_id')
+        if not current_user_id:
+            return jsonify({"error": "User not authenticated"}), 401
 
         new_password = Password(
-            website=website,
-            username=username,
-            password=password,
-            #logo_url=logo_url
+            user_id=current_user_id,  
+            website=data['website'],
+            username=data['username'],
+            password=data['password']
         )
-        db.session.add(new_password)
-        db.session.commit()
+        
+        print("Attempting to save password:", {
+            "user_id": new_password.user_id,
+            "website": new_password.website,
+            "username": new_password.username
+        })
 
-        logging.info(f"Password saved: {password}")
-        return jsonify({"message": "Password saved successfully!"}), 200
-
-    except Exception as e:
-        logging.error(f"Error saving password: {e}")
-        return jsonify({"error": "Failed to save password."}), 500
-
-        if not password or len(password) < 8:
-            return jsonify({"error": "Invalid password. Password must be at least 8 characters long."}), 400
-
-        logging.info(f"Password saved: {password}")  
-        return jsonify({"message": "Password saved successfully!"}), 200
-
-    except Exception as e:
-        logging.error(f"Error saving password: {e}")
-        return jsonify({"error": "Failed to save password."}), 500
-#==============================================2FA==================================================
-
-app.config['SECRET_KEY'] = os.urandom(24)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://your_username:your_password@localhost/your_database_name'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
-CORS(app)
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    two_fa_secret = db.Column(db.String(32), nullable=True)
-    backup_codes = db.Column(db.JSON, nullable=True)
-    last_2fa_attempt = db.Column(db.DateTime, nullable=True)
-    failed_attempts = db.Column(db.Integer, default=0)
-
-    def increment_failed_attempts(self):
-        self.failed_attempts += 1
-        self.last_2fa_attempt = datetime.utcnow()
-    def locked(self):
-        if self.failed_attempts >= 3:
-            cooldown = timedelta(minutes=15)
-            if datetime.utcnow() - self.last_2fa_attempt < cooldown:
-                return True
-        return False
-    def reset_failed_attempts(self):
-        self.failed_attempts = 0
-        self.last_2fa_attempt = None
-
-class TwoFactorAuth:
-    @staticmethod
-    def generate_secret():
-        return pyotp.random_base32()
-
-    @staticmethod
-    def generate_backup_codes(count=6):
-        return [secrets.token_hex(4) for _ in range(count)]
-
-    @staticmethod
-    def create_qr_code(secret, email):
         try:
-            if not email or not email.endswith('@gmail.com'):
-                raise ValueError("Invalid email address")
-            totp = pyotp.TOTP(secret)
-            qr_data = totp.provisioning_uri(name=email, issuer_name="CypherNest")
-            qr = qrcode.make(qr_data)
-            buffer = BytesIO()
-            qr.save(buffer, format="PNG")
-            return base64.b64encode(buffer.getvalue()).decode("utf-8")
-        except Exception as e:
-            logging.error(f"Error generating QR code: {e}")
-            return None
-    @staticmethod
-    def verify_otp(secret, otp, window=3):
-        totp = pyotp.TOTP(secret)
-        return totp.verify(otp, valid_window=window)
+            db.session.add(new_password)
+            db.session.commit()
+            print("Password saved successfully")
+            
+            return jsonify({
+                "message": "Password saved successfully",
+                "password": new_password.to_dict()
+            }), 200
+            
+        except Exception as db_error:
+            db.session.rollback()
+            print(f"Database error: {str(db_error)}")
+            return jsonify({
+                "error": "Database error",
+                "details": str(db_error)
+            }), 500
 
-@app.route('/2fa')
-def two_factor_setup():
-    return render_template('2fa-setup.html')
-
-@app.route('/api/2fa/generate', methods=['POST'])
-def generate_2fa_secret():
-    try:
-        email = request.json.get("email")
-        if not email:
-            return jsonify({"error": "Invalid user email."}), 400
-
-        # Find or create user
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(email=email)
-            db.session.add(user)
-        secret = TwoFactorAuth.generate_secret()
-        user.two_fa_secret = secret
-        backup_codes = TwoFactorAuth.generate_backup_codes()
-        user.backup_codes = backup_codes
-        qr_code = TwoFactorAuth.create_qr_code(secret, email)
-        if not qr_code:
-            logging.error(f"generation failed for email: {email}")
-            return jsonify({"error": "Failed to generate QR code."}), 500
-
-        db.session.commit()
+    except Exception as e:
+        print(f"General error: {str(e)}")
         return jsonify({
-            "secret": secret, 
-            "qr_code": qr_code, 
-            "backup_codes": backup_codes
+            "error": "Failed to save password",
+            "details": str(e)
+        }), 500
+
+# Add route to get user's saved passwords
+@app.route('/api/user/passwords', methods=['GET'])
+@login_required
+def get_user_passwords():
+    try:
+        current_user_id = session.get('user_id')
+        passwords = Password.query.filter_by(user_id=current_user_id).all()
+        
+        return jsonify({
+            "message": "Passwords retrieved successfully",
+            "passwords": [password.to_dict() for password in passwords]
         }), 200
     except Exception as e:
-        logging.error(f"Error in generate_2fa_secret: {e}")
-        db.session.rollback()
-        return jsonify({"error": "Failed to generate 2FA secret.", "details": str(e)}), 500
+        return jsonify({"error": "Failed to fetch passwords"}), 500
 
-@app.route('/api/2fa/verify', methods=['POST'])
-def verify_otp():
+# Add login route
+@app.route('/login', methods=['POST'])
+def login():
     try:
-        email = request.json.get("email")
-        otp = request.json.get("otp")
+        data = request.get_json()
+        user = User.query.filter_by(email=data['email']).first()
         
-        if not email or not otp:
-            return jsonify({"error": "Invalid input."}), 400
-
-        user = User.query.filter_by(email=email).first()
-        if not user or not user.two_fa_secret:
-            return jsonify({"error": "2FA not set up for this user."}), 400
-        if user.locked():
-            return jsonify({"error": "Too many failed attempts. Please try again later."}), 429
-        if user.failed_attempts >= 3 and user.last_2fa_attempt:
-            cooldown = timedelta(minutes=15)
-            if datetime.utcnow() - user.last_2fa_attempt < cooldown:
-                return jsonify({"error": "Too many failed attempts. Please try again later."}), 429
-
-        if TwoFactorAuth.verify_otp(user.two_fa_secret, otp):
-            user.reset_failed_attempts()
-            db.session.commit()
-            return jsonify({"message": "2FA verification successful!"}), 200
-        else:
-            user.increment_failed_attempts()
-            db.session.commit()
-            return jsonify({"error": "Invalid OTP.", "attempts_left": 5 - user.failed_attempts}), 400
+        if user and bcrypt.check_password_hash(user.password_hash, data['password']):
+            session['user_id'] = user.id
+            return jsonify({"message": "Login successful"}), 200
+        
+        return jsonify({"error": "Invalid credentials"}), 401
     except Exception as e:
-        return jsonify({"error": "Failed to verify OTP.", "details": str(e)}), 500
+        return jsonify({"error": "Login failed"}), 500
 
-@app.route('/api/2fa/validate-backup', methods=['POST'])
-def validate_backup_code():
+# Add logout route
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return jsonify({"message": "Logged out successfully"}), 200
+
+# Add this route to check authentication status
+@app.route('/api/check-auth', methods=['GET'])
+def check_auth():
+    if 'user_id' in session:
+        return jsonify({"authenticated": True, "user_id": session['user_id']}), 200
+    return jsonify({"authenticated": False}), 401
+
+# Error handlers
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    logging.warning(f"Rate limit exceeded: {str(e)}")
+    return jsonify({"error": "Rate limit exceeded. Please try again later."}), 429
+
+@app.errorhandler(500)
+def internal_error(e):
+    logging.error(f"Internal server error: {str(e)}")
+    return jsonify({"error": "Internal server error"}), 500
+
+def init_db():
     try:
-        email = request.json.get("email")
-        code = request.json.get("code")
-        
-        if not email or not code:
-            return jsonify({"error": "Invalid input."}), 400
-
-        user = User.query.filter_by(email=email).first()
-        if not user or not user.backup_codes:
-            return jsonify({"error": "No backup codes available."}), 400
-        if not isinstance(user.backup_codes, list):
-            return jsonify({"error": "Invalid backup codes format."}), 500
-
-        if code in user.backup_codes:
-            user.backup_codes.remove(code)
-            db.session.commit()
-            return jsonify({"message": "Backup code accepted!"}), 200
-        else:
-            return jsonify({"error": "Invalid backup code."}), 400
+        with app.app_context():
+            db.create_all()
+            logging.info("Database tables created successfully")
     except Exception as e:
-        return jsonify({"error": "Failed to validate backup code.", "details": str(e)}), 500
+        logging.error(f"Failed to initialize database: {str(e)}")
+        raise
+
+
+@app.after_request
+def after_request(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Accept, Authorization'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    return response
+    
+logging.info("Application started")
+logging.info("Database connection established")
+logging.info("Redis client connected")
+logging.info("Flask application initialized")
+logging.info("CORS configuration applied")
+logging.info("Limiter configuration applied")
+logging.info("Database tables created successfully")
+logging.info("User model initialized")
+logging.info("Password model initialized")
+logging.info("PasswordAnalytics model initialized")
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
-
+    init_db()  
+    app.run(debug=True, port=5000)

@@ -33,15 +33,15 @@ if ($mysqli->affected_rows) {
     <body style="font-family: Arial, sans-serif; color: #333333; line-height: 1.6;">
         <p>Dear User,</p>
         
-        <p>We received a request to reset the password for your account on <strong>EduFlow</strong>. If you did not request this change, please disregard this email.</p>
+        <p>We received a request to reset the password for your account on <strong>ChiperNest</strong>. If you did not request this change, please disregard this email.</p>
         
         <p>To reset your password, please click the link below:</p>
         <p><a href="http://localhost/Website chipernest/fp/reset-password.php?token=$token" style="color: #1a73e8; text-decoration: none; font-weight: bold;">Reset Your Password</a></p>
         
-        <p>If you need any assistance or have questions, feel free to contact our support team at support@eduflow.com.</p>
+        <p>If you need any assistance or have questions, feel free to contact our support team at support@chipernest.com.</p>
         
         <p>Best regards,</p>
-        <p><strong>The EduFlow Support Team</strong></p>
+        <p><strong>The ChiperNest Support Team</strong></p>
     </body>
     </html>
 END;

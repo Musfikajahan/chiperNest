@@ -1,0 +1,266 @@
+.security-header {
+    margin-bottom: 2rem;
+}
+
+.security-header h1 {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+}
+
+.security-header p {
+    color: #6b7280;
+}
+
+.security-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.security-card {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.security-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.card-header i {
+    font-size: 1.5rem;
+    color: #3b82f6;
+}
+
+.card-header h2 {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #111827;
+}
+
+.card-content {
+    padding: 1.5rem;
+}
+
+/* Password Input Styles */
+.password-input-group {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+.password-input-group input {
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.toggle-visibility {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+}
+
+/* Strength Meter */
+.strength-meter {
+    height: 4px;
+    background-color: #e5e7eb;
+    border-radius: 2px;
+    margin: 1rem 0;
+}
+
+.strength-bar {
+    height: 100%;
+    width: 0;
+    background-color: #ef4444;
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+.strength-bar.weak { width: 25%; background-color: #ef4444; }
+.strength-bar.fair { width: 50%; background-color: #f59e0b; }
+.strength-bar.good { width: 75%; background-color: #10b981; }
+.strength-bar.strong { width: 100%; background-color: #059669; }
+
+.strength-label {
+    font-size: 0.875rem;
+    color: #374151;
+    margin-bottom: 1rem;
+}
+
+/* Password Requirements */
+.password-requirements {
+    list-style: none;
+    padding: 0;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.requirement i {
+    color: #d1d5db;
+}
+
+.requirement.valid i {
+    color: #10b981;
+}
+
+/* Breach Check */
+.description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.check-breach-btn {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.breach-result {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+}
+
+.result-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: #e5e7eb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.result-icon i {
+    color: #9ca3af;
+    font-size: 1.25rem;
+}
+
+/* Security Alerts */
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+}
+
+.alert-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.alert-item.warning .alert-icon {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.alert-item.danger .alert-icon {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.alert-content {
+    flex-grow: 1;
+}
+
+.alert-content h3 {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.alert-content p {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.25rem;
+}
+
+.alert-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+
+.alert-action {
+    padding: 0.5rem 1rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .security-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .security-card.full-width {
+        grid-column: auto;
+    }
+
+    .alert-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .alert-action {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+}

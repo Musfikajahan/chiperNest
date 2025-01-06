@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notifications - CypherNest</title>
+    <title>Notifications - ChiperNest</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="notifications.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -17,13 +17,14 @@
                 <h1>ChiperNest</h1>
             </div>
            
-            <button class="add-password-btn">
-                <i class="fas fa-plus"></i>
-                <span>Add Password</span>
-            </button>
-
+            <a href="password_form.php">
+                <button class="add-password-btn">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Password</span>
+                </button>
+            </a>
             <nav class="nav-menu">
-                <a href="index.html" class="nav-item">
+                <a href="index.php" class="nav-item">
                     <i class="fas fa-home"></i>
                     <span>Dashboard</span>
                 </a>
@@ -35,7 +36,11 @@
                     <i class="fas fa-random"></i>
                     <span>Generator</span>
                 </a>
-                <a href="analytics.html" class="nav-item">
+                <a href="Securitycheck.html" class="nav-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Security Check</span>
+                </a>
+                <a href="analytics.php" class="nav-item">
                     <i class="fas fa-chart-line"></i>
                     <span>Analytics</span>
                 </a>
@@ -43,7 +48,7 @@
                     <i class="fas fa-bell"></i>
                     <span>Notifications</span>
                 </a>
-                <a href="settings.html" class="nav-item">
+                <a href="settings.php" class="nav-item">
                     <i class="fas fa-cog"></i>
                     <span>Settings</span>
                 </a>
@@ -185,5 +190,6 @@
             </div>
         </main>
     </div>
+    <script src="../Static/Js/notifications.js"></script>
 </body>
 </html>
